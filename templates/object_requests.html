@@ -1,0 +1,56 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h1 class="h1">Заявки объекта: {{ object.name }}</h1>
+  <a
+    href="{{ url_for('object.objects') }}"
+    class="btn btn-outline-secondary mb-3"
+    >Назад к объектам</a
+  >
+  {% if requests %} {% for req in requests %}
+  <div class="card mb-3">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <span>Заявка #{{ req.id }}</span>
+        <span
+          class="badge{% if req.status == RequestStatus.DONE.value %} bg-success{% else %} bg-warning{% endif %}"
+          >{{ status_label(req.status) }}</span
+        >
+      </div>
+    </div>
+    <div class="card-body">
+      {% set contractors = get_request_contractor(req) %}
+      <p>
+        <strong>Подрядчик:</strong>
+        {% if contractors %} {% for contractor in contractors %} {{
+        contractor.name }}{% if not loop.last %}, {% endif %} {% endfor %} {%
+        else %} — {% endif %}
+      </p>
+      <p>
+        <strong>Производители:</strong>
+        {% for manufacturer in req.manufacturers.split(',') %} {{
+        manufacturer.strip()|e }} {% if not loop.last %}, {% endif %} {% endfor
+        %}
+      </p>
+      <p>
+        <strong>Создана:</strong> {{ req.created_at.strftime('%d.%m.%Y %H:%M')
+        }}
+      </p>
+      <div class="d-flex gap-2">
+        <a
+          href="{{ url_for('request_crud.view_request', id=req.id) }}"
+          class="btn btn-sm btn-info"
+          >Просмотр</a
+        >
+        <a
+          href="{{ url_for('request_process.process_request', id=req.id) }}"
+          class="btn btn-sm btn-warning"
+          >Обработать</a
+        >
+      </div>
+    </div>
+  </div>
+  {% endfor %} {% else %}
+  <div class="alert alert-info">Нет заявок для этого объекта</div>
+  {% endif %}
+</div>
+{% endblock %}

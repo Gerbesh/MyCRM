@@ -1,0 +1,76 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Редактировать пользователя</h1>
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="username" class="form-label">мя пользователя:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            name="username"
+            value="{{ user.username }}"
+            required
+          />
+        </div>
+        <div class="mb-3">
+          <label for="role" class="form-label">Роль:</label>
+          <select class="form-control" id="role" name="role" required>
+            <option value="">Выберите роль</option>
+            <option
+              value="admin"
+              {%
+              if
+              user.role=""
+              ="admin"
+              %}selected{%
+              endif
+              %}
+            >
+              Администратор
+            </option>
+            <option
+              value="user"
+              {%
+              if
+              user.role=""
+              ="user"
+              %}selected{%
+              endif
+              %}
+            >
+              Пользователь
+            </option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label"
+            >Новый пароль (оставьте пустым, чтобы не менять):</label
+          >
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            name="password"
+          />
+        </div>
+        <button
+          type="button"
+          class="btn btn-secondary me-2"
+          onclick="history.back()"
+        >
+          Назад
+        </button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="{{ url_for('user.users') }}" class="btn btn-secondary"
+          >Отмена</a
+        >
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

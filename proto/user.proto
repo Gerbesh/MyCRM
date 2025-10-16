@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package crm;
+
+message GetUserRequest {
+  int32 id = 1;
+}
+
+message User {
+  int32 id = 1;
+  string username = 2;
+  string role = 3;
+}
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (User);
+}

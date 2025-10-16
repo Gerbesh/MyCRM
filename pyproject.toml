@@ -1,0 +1,23 @@
+# Конфигурация инструментов проверки стиля и типов
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+disallow_untyped_defs = true
+ignore_missing_imports = true
+files = [
+  "extensions.py",
+  "database.py",
+  "check.py",
+]

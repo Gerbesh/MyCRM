@@ -1,0 +1,15 @@
+{% extends "base.html" %} {% block content %}
+<div class="container text-center mt-5">
+  <h1>Система управления заявками</h1>
+  <p class="lead">Добро пожаловать в систему управления заявками</p>
+  {% if not current_user.is_authenticated %}
+  <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg"
+    >Войти в систему</a
+  >
+  {% else %}
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg"
+    >Перейти к заявкам</a
+  >
+  {% endif %}
+</div>
+{% endblock %}

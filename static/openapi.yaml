@@ -1,0 +1,886 @@
+openapi: 3.1.0
+info:
+  title: CRM REST API
+  version: 1.0.0
+  summary: Документация REST API CRM
+  description: |
+    Описание REST API для CRM-приложения. Большинство эндпоинтов требует
+    авторизации через cookie-сессию и защиты CSRF для методов изменения данных.
+
+    В проекте используется cookie-сессия Flask-Login и CSRF-защита Flask-WTF.
+    Для POST/PUT/DELETE запросов добавляйте заголовок `X-CSRFToken` с актуальным токеном.
+    Получить новый токен можно через `GET /refresh_csrf`.
+
+servers:
+  - url: /
+    description: Текущий сервер
+
+tags:
+  - name: Health
+    description: Проверки доступности и служебные утилиты
+  - name: Auth
+    description: Аутентификация и сессии
+  - name: Objects
+    description: Объекты (поиск и справочники)
+  - name: Contractors
+    description: Подрядчики (поиск и справочники)
+  - name: Requests
+    description: Заявки и операции над ними
+  - name: Search
+    description: Поиск по объектам и подрядчикам
+  - name: Files
+    description: Файлы и вложения
+  - name: Admin
+    description: Административные функции
+  - name: Audit
+    description: Клиентские события для аудита
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Cookie-сессия Flask-Login (`session`)
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRFToken
+      description: CSRF-токен Flask-WTF. Получайте через GET /refresh_csrf
+  parameters:
+    CsrfHeader:
+      name: X-CSRFToken
+      in: header
+      required: true
+      description: CSRF-токен для защищённых операций
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Максимальное количество элементов (по умолчанию 50, не более 100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Смещение выборки (по умолчанию 0)
+      schema:
+        type: integer
+        minimum: 0
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: Проверка ETag для условного GET
+      schema:
+        type: string
+    IfModifiedSince:
+      name: If-Modified-Since
+      in: header
+      required: false
+      description: Проверка даты изменения для условного GET
+      schema:
+        type: string
+        format: date-time
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+      required: [error]
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success]
+    CSRFToken:
+      type: object
+      properties:
+        csrf_token:
+          type: string
+      required: [csrf_token]
+    Object:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: [string, 'null']
+        customer:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        created_at:
+          type: [string, 'null']
+          format: date-time
+      required: [id, name]
+    Contractor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        inn:
+          type: [string, 'null']
+        contact_person:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        email:
+          type: [string, 'null']
+        created_at:
+          type: [string, 'null']
+          format: date-time
+      required: [id, name]
+    ContractorBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required: [id, name]
+    RequestStatus:
+      type: string
+      enum: [OPEN, IN_PROGRESS, ACCEPTED, ASSIGNED, DONE, REJECTED, NEED_INFO]
+    RequestSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/RequestStatus'
+        created_at:
+          type: string
+          format: date-time
+        manufacturers:
+          type: array
+          items:
+            type: string
+        contractors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractorBrief'
+      required: [id, status, created_at, manufacturers, contractors]
+    StatusChangeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        label:
+          type: string
+          description: Человеко-читаемая метка статуса (RU)
+        class:
+          type: string
+          description: CSS-класс для визуализации статуса
+      required: [success, label, class]
+    NewPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        new_password:
+          type: string
+      required: [success, new_password]
+    SearchResultItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        similarity:
+          type: number
+          format: float
+      required: [id, name]
+    AdminLogLines:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            type: string
+      required: [lines]
+
+security:
+  - cookieAuth: []
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Проверка доступности
+      description: Возвращает 'OK' при доступности приложения.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: OK
+
+  /refresh_csrf:
+    get:
+      tags: [Auth]
+      summary: Обновить CSRF-токен
+      description: Возвращает новый CSRF-токен для защищённых запросов.
+      security: []
+      responses:
+        '200':
+          description: Новый CSRF-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CSRFToken'
+              examples:
+                sample:
+                  value:
+                    csrf_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+  /api/v1/get_all_objects:
+    get:
+      tags: [Objects]
+      summary: Список объектов
+      description: Получить все объекты (для автокомплита и справочников).
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/IfNoneMatch'
+        - $ref: '#/components/parameters/IfModifiedSince'
+      responses:
+        '200':
+          description: Успех
+          headers:
+            ETag:
+              description: Текущее значение ETag
+              schema:
+                type: string
+            Last-Modified:
+              description: Дата последнего изменения
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Object'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                      next:
+                        type: [string, 'null']
+                        format: uri
+                      related:
+                        type: [string, 'null']
+                        format: uri
+                required: [data, links]
+              examples:
+                sample:
+                  value:
+                    data:
+                      - id: 1
+                        name: 'Объект 1'
+                        address: 'ул. Пушкина, 1'
+                        customer: 'ООО Ридан'
+                    links:
+                      self: 'https://example.com/api/v1/get_all_objects?limit=50&offset=0'
+                      next: null
+                      related: 'https://example.com/api/v1/get_all_contractors'
+        '304':
+          description: Не изменилось
+        '500':
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {}
+                  links:
+                    type: object
+
+  /api/v1/get_all_contractors:
+    get:
+      tags: [Contractors]
+      summary: Список подрядчиков
+      description: Получить всех подрядчиков (для автокомплита и справочников).
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/IfNoneMatch'
+        - $ref: '#/components/parameters/IfModifiedSince'
+      responses:
+        '200':
+          description: Успех
+          headers:
+            ETag:
+              description: Текущее значение ETag
+              schema:
+                type: string
+            Last-Modified:
+              description: Дата последнего изменения
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContractorBrief'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                      next:
+                        type: [string, 'null']
+                        format: uri
+                      related:
+                        type: [string, 'null']
+                        format: uri
+                required: [data, links]
+              examples:
+                sample:
+                  value:
+                    data:
+                      - id: 10
+                        name: 'ООО ТеплоМонтаж'
+                    links:
+                      self: 'https://example.com/api/v1/get_all_contractors?limit=50&offset=0'
+                      next: null
+                      related: 'https://example.com/api/v1/get_all_objects'
+        '304':
+          description: Не изменилось
+        '500':
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {}
+                  links:
+                    type: object
+
+  '/api/v1/requests/by_contractor/{contractor_id}':
+    get:
+      tags: [Requests]
+      summary: Заявки по подрядчику
+      description: Возвращает список заявок, связанных с указанным подрядчиком.
+      parameters:
+        - name: contractor_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/IfNoneMatch'
+        - $ref: '#/components/parameters/IfModifiedSince'
+      responses:
+        '200':
+          description: Список заявок
+          headers:
+            ETag:
+              description: Текущее значение ETag
+              schema:
+                type: string
+            Last-Modified:
+              description: Дата последнего изменения
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RequestSummary'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                      next:
+                        type: [string, 'null']
+                        format: uri
+                      related:
+                        type: [string, 'null']
+                        format: uri
+                required: [data, links]
+              examples:
+                sample:
+                  value:
+                    data:
+                      - id: 101
+                        status: OPEN
+                        created_at: '2025-01-10T12:34:56Z'
+                        manufacturers: ['Пульсар', 'Евра']
+                        contractors:
+                          - { id: 55, name: 'ООО ТеплоМонтаж' }
+                    links:
+                      self: 'https://example.com/api/v1/requests/by_contractor/1?limit=50&offset=0'
+                      next: null
+                      related: 'https://example.com/api/v1/get_all_contractors'
+        '304':
+          description: Не изменилось
+        '500':
+          description: Ошибка сервера
+
+  '/api/v1/requests/by_object/{object_id}':
+    get:
+      tags: [Requests]
+      summary: Заявки по объекту
+      description: Возвращает список заявок для указанного объекта.
+      parameters:
+        - name: object_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/IfNoneMatch'
+        - $ref: '#/components/parameters/IfModifiedSince'
+      responses:
+        '200':
+          description: Список заявок
+          headers:
+            ETag:
+              description: Текущее значение ETag
+              schema:
+                type: string
+            Last-Modified:
+              description: Дата последнего изменения
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RequestSummary'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                      next:
+                        type: [string, 'null']
+                        format: uri
+                      related:
+                        type: [string, 'null']
+                        format: uri
+                required: [data, links]
+        '304':
+          description: Не изменилось
+        '500':
+          description: Ошибка сервера
+
+  '/requests/process/change_request_object/{id}':
+    post:
+      tags: [Requests]
+      summary: Изменить объект у заявки
+      description: Обновляет объект заявки. Требуется CSRF заголовок.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_object_id:
+                  type: integer
+              required: [new_object_id]
+            examples:
+              sample:
+                value: { new_object_id: 2 }
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  new_object_name:
+                    type: string
+                required: [success, new_object_name]
+              examples:
+                sample:
+                  value:
+                    success: true
+                    message: 'Объект заявки изменён на "ТЦ Ривьера"'
+                    new_object_name: 'ТЦ Ривьера'
+        '400':
+          description: Неверные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Недостаточно прав
+        '404':
+          description: Объект не найден
+        '500':
+          description: Ошибка сервера
+
+  '/requests/process/change_status/{id}':
+    post:
+      tags: [Requests]
+      summary: Сменить статус заявки
+      description: Устанавливает новый статус заявки. Требуется CSRF заголовок.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/RequestStatus'
+              required: [status]
+            examples:
+              sample:
+                value: { status: IN_PROGRESS }
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusChangeResponse'
+              examples:
+                sample:
+                  value:
+                    success: true
+                    label: 'В работе'
+                    class: 'info'
+        '400': { description: Неверные данные }
+        '403': { description: Недостаточно прав }
+        '500': { description: Ошибка сервера }
+
+  '/files/delete_screenshot/{attachment_id}':
+    post:
+      tags: [Files]
+      summary: Удалить скриншот (вложение)
+      description: Удаляет файл-скриншот и запись вложения. Требуется CSRF заголовок.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: attachment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Успешное удаление
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+              examples:
+                sample:
+                  value: { success: true, message: 'Скриншот успешно удален' }
+        '403': { description: Недостаточно прав }
+        '500':
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  '/files/download_file/{filename}':
+    get:
+      tags: [Files]
+      summary: Скачать файл
+      description: Выдаёт файл из каталога статических файлов. Путь может включать подкаталоги.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          description: Относительный путь внутри каталога `static/`
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404': { description: Файл не найден }
+        '500': { description: Ошибка сервера }
+
+  /users/add_user:
+    post:
+      tags: [Admin]
+      summary: Добавить пользователя
+      description: Создаёт нового пользователя. Требуются права администратора и CSRF заголовок.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                password: { type: string }
+                role: { type: string, enum: [admin, user, demo] }
+                csrf_token: { type: string, description: 'CSRF-токен' }
+              required: [username, password, role]
+            examples:
+              sample:
+                value:
+                  username: 'ivan'
+                  password: 'StrongPassw0rd!'
+                  role: 'admin'
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                password: { type: string }
+                role: { type: string }
+                csrf_token: { type: string, description: 'CSRF-токен' }
+              required: [username, password, role]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  password: { type: string }
+                required: [success]
+              examples:
+                sample:
+                  value: { success: true, password: 'StrongPassw0rd!' }
+        '400':
+          description: Валидационная ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403': { description: Недостаточно прав }
+        '500': { description: Ошибка сервера }
+
+  '/users/reset_user_password/{id}':
+    post:
+      tags: [Admin]
+      summary: Сброс пароля пользователя
+      description: Генерирует новый пароль для пользователя. Требуются права администратора и CSRF заголовок.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewPasswordResponse'
+        '403': { description: Недостаточно прав }
+        '404': { description: Пользователь не найден }
+        '500': { description: Ошибка сервера }
+
+  /search/search_objects:
+    get:
+      tags: [Search]
+      summary: Поиск объектов (подсказки)
+      description: Возвращает до 10 объектов по подстроке.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResultItem'
+        '400': { description: Ошибка валидации запроса }
+        '500': { description: Ошибка сервера }
+
+  /search/search_contractors:
+    get:
+      tags: [Search]
+      summary: Поиск подрядчиков (подсказки)
+      description: Возвращает до 10 подрядчиков по подстроке.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResultItem'
+        '400': { description: Ошибка валидации запроса }
+        '500': { description: Ошибка сервера }
+
+  /search/search:
+    get:
+      tags: [Search]
+      summary: Поиск (объект/подрядчик)
+      description: Выполняет общий поиск по типу и запросу.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [object, contractor]
+      responses:
+        '200':
+          description: Результаты поиска
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchResultItem'
+                  query: { type: string }
+                required: [items, query]
+        '500': { description: Ошибка сервера }
+
+  /admin/logs/data:
+    get:
+      tags: [Admin]
+      summary: Последние строки audit-лога
+      description: Возвращает последние строки файла `logs/audit.log` (только для админов).
+      responses:
+        '200':
+          description: Линии лога
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLogLines'
+        '403': { description: Недостаточно прав }
+
+  /api/v1/audit/event:
+    post:
+      tags: [Audit]
+      summary: Клиентское событие
+      description: Приём клиентских событий (sendBeacon/JSON). Требуется CSRF-токен; при задании `AUDIT_EVENT_TOKEN` добавьте заголовок `X-Audit-Token`.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                data: { type: object }
+            examples:
+              click:
+                value:
+                  name: 'ui.click'
+                  data: { button: 'save', section: 'requests' }
+      responses:
+        '204': { description: Принято }

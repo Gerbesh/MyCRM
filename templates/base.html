@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="user"
+      content="{{ current_user.username if current_user.is_authenticated else 'guest' }}"
+    />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <meta name="theme-color" content="{{ THEME_COLOR }}" />
+    <meta name="app-version" content="{{ APP_VERSION }}" />
+    <title>{% block title %}Крепления{% endblock %}</title>
+
+    <!-- Preload критичных ресурсов -->
+    <link
+      rel="preload"
+      href="{{ url_for('static', filename='design-tokens.css') }}"
+      as="style"
+    />
+    <link
+      rel="preload"
+      href="{{ url_for('static', filename='dark-theme.css') }}"
+      as="style"
+    />
+    <link
+      rel="preload"
+      href="{{ url_for('static', filename='modern-style.css') }}"
+      as="style"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Основные стили -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='design-tokens.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='dark-theme.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='modern-style.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='base.css') }}"
+      rel="stylesheet"
+    />
+    {% block extra_css %}{% endblock %}
+
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+      type="image/x-icon"
+    />
+
+    <!-- SEO и метаданные -->
+    <meta
+      name="description"
+      content="Современная CRM система для управления заявками и подрядчиками"
+    />
+    <meta name="keywords" content="CRM, заявки, подрядчики, управление" />
+    <script src="{{ url_for('static', filename='js/version-check.js') }}"></script>
+    <script>
+      checkVersion().then(() => location.reload());
+    </script>
+    <!-- Внешние библиотеки грузим асинхронно, чтобы не блокировать отрисовку -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"
+      async
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"
+      async
+    ></script>
+    <script>
+      window.STATUS_LABELS_RU = {{ status_labels|tojson }};
+      window.STATUS_CLASS = {{ status_classes|tojson }};
+    </script>
+    <script
+      type="module"
+      src="{{ url_for('static', filename='js/app-init.js') }}"
+    ></script>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const paramTheme = params.get('theme');
+        const savedTheme = localStorage.getItem('theme');
+        const theme = paramTheme || savedTheme || 'light';
+        if (paramTheme && paramTheme !== savedTheme) {
+          localStorage.setItem('theme', paramTheme);
+        }
+        if (theme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.id = 'dark-theme';
+          link.href = "{{ url_for('static', filename='dark-theme.css') }}";
+          document.head.appendChild(link);
+          const metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', '#111827');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+  </head>
+
+  <body data-demo-user="{{ 'true' if current_user.is_authenticated and current_user.role == 'demo' else 'false' }}">
+    <!-- Лоадер страницы -->
+    <div class="page-loader" id="pageLoader">
+      <div class="loader-spinner"></div>
+    </div>
+
+    <!-- Flash сообщения -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div
+      class="flash-messages-container"
+      style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1070;
+        max-width: 400px;
+      "
+    >
+      {% for category, message in messages %}
+      <div
+        class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show slide-down"
+        role="alert"
+        style="margin-bottom: 10px; animation-delay: {{ loop.index0 * 0.1 }}s;"
+      >
+        <i
+          class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }}"
+        ></i>
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
+    <!-- Навигация -->
+    {% include 'navbar.html' %}
+
+    <!-- Немедленное исправление z-index для navbar -->
+    <script type="application/json" data-disabled="true">
+      (function () {
+        // Находим navbar немедленно
+        const navbar = document.querySelector('.navbar');
+        if (navbar) {
+          console.log('Немедленно устанавливаем z-index для navbar на 1031');
+          navbar.style.setProperty('z-index', '1031', 'important');
+          navbar.style.setProperty('position', 'relative', 'important');
+
+          // Постоянно мониторим и исправляем
+          function keepNavbarZIndex() {
+            if (navbar) {
+              const currentZ = window.getComputedStyle(navbar).zIndex;
+              if (currentZ !== '1031' && currentZ !== 'auto') {
+                console.log(
+                  'Корректируем navbar z-index с',
+                  currentZ,
+                  'на 1031'
+                );
+                navbar.style.setProperty('z-index', '1031', 'important');
+                navbar.style.setProperty('position', 'relative', 'important');
+              }
+            }
+          }
+
+          // Проверяем каждые 100мс
+          setInterval(keepNavbarZIndex, 100);
+
+          // Также слушаем события модалок
+          document.addEventListener('show.bs.modal', function () {
+            console.log('Модальное окно открывается, проверяем navbar z-index');
+            keepNavbarZIndex();
+          });
+        }
+      })();
+    </script>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+      <div class="container-fluid px-4 py-4">
+        {% if current_user.is_authenticated and current_user.role == 'demo' %}
+        <div class="alert alert-warning shadow-sm demo-alert" role="status">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-eye me-2"></i>
+            <div>
+              <strong>Демо-режим.</strong>
+              Доступна только навигация и просмотр данных, изменения отключены.
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="content-wrapper fade-in">
+          {% block content %}{% endblock %}
+        </div>
+      </div>
+    </main>
+
+    <!-- Глобальная модалка поиска -->
+    <div class="modal fade" id="searchModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Выберите или создайте</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Закрыть"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <ul class="list-group mb-3" id="searchResults"></ul>
+            <button class="btn btn-success w-100" id="createNewBtn">
+              Создать "<span id="createName"></span>"
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Обязательно: Bootstrap JS + Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+    <!-- Немедленная настройка модалок -->
+    <script type="application/json" data-disabled="true">
+      document.addEventListener('DOMContentLoaded', function () {
+        // Перемещаем все модалы в конец body для правильной работы z-index
+        const modals = document.querySelectorAll('.modal');
+        console.log('Найдено модалок:', modals.length);
+
+        modals.forEach((modal) => {
+          // Проверяем, не находится ли модал уже в body
+          if (modal.parentElement !== document.body) {
+            console.log('Перемещаем модал', modal.id, 'в body');
+            document.body.appendChild(modal);
+          }
+
+          // Принудительно устанавливаем z-index
+          modal.style.setProperty('z-index', '1055', 'important');
+
+          // Находим modal-dialog и modal-content
+          const dialog = modal.querySelector('.modal-dialog');
+          const content = modal.querySelector('.modal-content');
+
+          if (dialog) {
+            dialog.style.setProperty('z-index', '1056', 'important');
+          }
+          if (content) {
+            content.style.setProperty('z-index', '1057', 'important');
+          }
+        });
+
+        // Обработчик для отслеживания открытия модалок
+        document.addEventListener('show.bs.modal', function (event) {
+          const modal = event.target;
+          console.log('Открывается модал:', modal.id);
+
+          // Принудительно устанавливаем z-index при открытии
+          modal.style.setProperty('z-index', '1055', 'important');
+
+          const dialog = modal.querySelector('.modal-dialog');
+          const content = modal.querySelector('.modal-content');
+
+          if (dialog) {
+            dialog.style.setProperty('z-index', '1056', 'important');
+          }
+          if (content) {
+            content.style.setProperty('z-index', '1057', 'important');
+          }
+
+          // Обрабатываем backdrop
+          setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach((backdrop) => {
+              backdrop.style.setProperty('z-index', '1050', 'important');
+            });
+          }, 50);
+        });
+
+        // Очищаем лишние backdrop'ы при закрытии
+        document.addEventListener('hidden.bs.modal', function (event) {
+          setTimeout(() => {
+            const activeModals = document.querySelectorAll('.modal.show');
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+
+            if (activeModals.length === 0) {
+              backdrops.forEach((backdrop) => {
+                if (backdrop.parentNode) {
+                  backdrop.parentNode.removeChild(backdrop);
+                }
+              });
+              document.body.classList.remove('modal-open');
+              document.body.style.overflow = '';
+              document.body.style.paddingRight = '';
+            }
+          }, 100);
+        });
+      });
+    </script>
+
+    <!-- Отладочные функции для z-index -->
+    <script type="application/json" data-disabled="true">
+      // Глобальные функции для отладки z-index'ов
+      window.debugZIndex = function () {
+        console.log('=== Отладка Z-Index иерархии ===');
+
+        const navbar = document.querySelector('.navbar');
+        const modals = document.querySelectorAll('.modal');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+
+        if (navbar) {
+          const navbarZ = window.getComputedStyle(navbar).zIndex;
+          const navbarPos = window.getComputedStyle(navbar).position;
+          console.log(`Navbar: z-index=${navbarZ}, position=${navbarPos}`);
+        }
+
+        modals.forEach((modal, i) => {
+          const modalZ = window.getComputedStyle(modal).zIndex;
+          const modalPos = window.getComputedStyle(modal).position;
+          const isVisible = modal.classList.contains('show');
+          console.log(
+            `Modal ${i} (${modal.id}): z-index=${modalZ}, position=${modalPos}, visible=${isVisible}`
+          );
+
+          const dialog = modal.querySelector('.modal-dialog');
+          const content = modal.querySelector('.modal-content');
+
+          if (dialog) {
+            const dialogZ = window.getComputedStyle(dialog).zIndex;
+            console.log(`  - Dialog: z-index=${dialogZ}`);
+          }
+
+          if (content) {
+            const contentZ = window.getComputedStyle(content).zIndex;
+            console.log(`  - Content: z-index=${contentZ}`);
+          }
+        });
+
+        backdrops.forEach((backdrop, i) => {
+          const backdropZ = window.getComputedStyle(backdrop).zIndex;
+          console.log(`Backdrop ${i}: z-index=${backdropZ}`);
+        });
+
+        console.log('=== Конец отладки ===');
+      };
+
+      // Функция для принудительного исправления z-index
+      window.fixZIndex = function () {
+        console.log('Принудительное исправление z-index...');
+
+        // Навбар
+        const navbar = document.querySelector('.navbar');
+        if (navbar) {
+          navbar.style.setProperty('z-index', '1031', 'important');
+          navbar.style.setProperty('position', 'relative', 'important');
+          console.log('Navbar z-index установлен на 1031');
+        }
+
+        // Модалы
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach((modal) => {
+          modal.style.setProperty('z-index', '1055', 'important');
+
+          const dialog = modal.querySelector('.modal-dialog');
+          const content = modal.querySelector('.modal-content');
+
+          if (dialog) {
+            dialog.style.setProperty('z-index', '1056', 'important');
+          }
+          if (content) {
+            content.style.setProperty('z-index', '1057', 'important');
+          }
+        });
+
+        // Backdrop
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach((backdrop) => {
+          backdrop.style.setProperty('z-index', '1050', 'important');
+        });
+
+        console.log('справление завершено!');
+      };
+
+      // Визуальная отладка - добавляет цветные рамки
+      window.visualDebug = function () {
+        const navbar = document.querySelector('.navbar');
+        const modals = document.querySelectorAll('.modal');
+
+        if (navbar) {
+          navbar.setAttribute('data-debug', 'true');
+        }
+
+        modals.forEach((modal) => {
+          modal.setAttribute('data-debug', 'true');
+        });
+
+        console.log(
+          'Визуальная отладка включена (синяя рамка = navbar, красная = modal)'
+        );
+      };
+
+      console.log('Отладочные функции доступны:');
+      console.log('- debugZIndex() - показать текущие z-index');
+      console.log('- fixZIndex() - принудительно исправить z-index');
+      console.log('- visualDebug() - включить визуальную отладку');
+    </script>
+
+    <!-- Система управления модальными окнами -->
+    <script type="application/json" data-disabled="true">
+      // Глобальная система управления модальными окнами для Bootstrap 5
+      (function () {
+        'use strict';
+
+        // Глобальные переменные
+        let modalInstances = new Map();
+        let isInitialized = false;
+
+        // Основная функция инициализации системы
+        function initModalSystem() {
+          if (isInitialized) return;
+          isInitialized = true;
+
+          console.log('нициализация системы модальных окон');
+
+          // Начальная очистка
+          cleanupOrphanedBackdrops();
+
+          // Глобальные обработчики событий
+          setupGlobalHandlers();
+
+          // Настройка наблюдателя за DOM
+          setupMutationObserver();
+        }
+
+        // Очистка остаточных backdrop'ов
+        function cleanupOrphanedBackdrops() {
+          const activeModals = document.querySelectorAll('.modal.show');
+          const allBackdrops = document.querySelectorAll('.modal-backdrop');
+
+          if (activeModals.length === 0) {
+            // Нет активных модалок - удаляем все backdrop'ы
+            allBackdrops.forEach((backdrop) => {
+              if (backdrop && backdrop.parentNode) {
+                backdrop.parentNode.removeChild(backdrop);
+              }
+            });
+
+            // Восстанавливаем body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+          } else if (allBackdrops.length > 1) {
+            // Есть активные модалки - оставляем только один backdrop
+            for (let i = 1; i < allBackdrops.length; i++) {
+              if (allBackdrops[i] && allBackdrops[i].parentNode) {
+                allBackdrops[i].parentNode.removeChild(allBackdrops[i]);
+              }
+            }
+          }
+        }
+
+        // Настройка глобальных обработчиков
+        function setupGlobalHandlers() {
+          // Обработчик закрытия модалок
+          document.addEventListener('hidden.bs.modal', function (event) {
+            setTimeout(cleanupOrphanedBackdrops, 100);
+          });
+
+          // ESC для закрытия
+          document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+              const openModals = document.querySelectorAll('.modal.show');
+              openModals.forEach((modal) => {
+                const modalId = modal.id;
+                if (modalId && modalInstances.has(modalId)) {
+                  modalInstances.get(modalId).hide();
+                }
+              });
+            }
+          });
+
+          // Предотвращение множественных backdrop'ов
+          document.addEventListener('show.bs.modal', function (event) {
+            setTimeout(cleanupOrphanedBackdrops, 50);
+          });
+        }
+
+        // Настройка наблюдателя за изменениями DOM
+        function setupMutationObserver() {
+          if (!window.MutationObserver) return;
+
+          const observer = new MutationObserver(function (mutations) {
+            let needsCleanup = false;
+
+            mutations.forEach(function (mutation) {
+              mutation.addedNodes.forEach(function (node) {
+                if (
+                  node.nodeType === 1 &&
+                  node.className &&
+                  String(node.className).includes('modal-backdrop')
+                ) {
+                  needsCleanup = true;
+                }
+              });
+            });
+
+            if (needsCleanup) {
+              setTimeout(cleanupOrphanedBackdrops, 100);
+            }
+          });
+
+          observer.observe(document.body, {
+            childList: true,
+            subtree: false,
+          });
+        }
+
+        // Публичный API
+        window.ModalSystem = {
+          // нициализация модального окна
+          init: function (modalElement, options = {}) {
+            if (!modalElement) return null;
+
+            const modalId =
+              modalElement.id || Math.random().toString(36).substr(2, 9);
+
+            // Уничтожаем существующий экземпляр
+            if (modalInstances.has(modalId)) {
+              try {
+                modalInstances.get(modalId).dispose();
+              } catch (e) {
+                console.log('Ошибка при удалении модального окна:', e);
+              }
+              modalInstances.delete(modalId);
+            }
+
+            // Создаем новый экземпляр
+            const defaultOptions = {
+              backdrop: true,
+              keyboard: true,
+              focus: true,
+            };
+
+            const modalInstance = new bootstrap.Modal(modalElement, {
+              ...defaultOptions,
+              ...options,
+            });
+            modalInstances.set(modalId, modalInstance);
+
+            // Добавляем обработчики (без переопределения z-index - они установлены в CSS)
+            modalElement.addEventListener('shown.bs.modal', function () {
+              setTimeout(cleanupOrphanedBackdrops, 50);
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', function () {
+              setTimeout(cleanupOrphanedBackdrops, 100);
+            });
+
+            return modalInstance;
+          },
+
+          // Показ модального окна
+          show: function (modalId, options = {}) {
+            const modalElement = document.getElementById(modalId);
+            if (!modalElement) {
+              console.error('Модальное окно не найдено:', modalId);
+              return null;
+            }
+
+            const modalInstance = this.init(modalElement, options);
+            if (modalInstance) {
+              modalInstance.show();
+            }
+
+            return modalInstance;
+          },
+
+          // Скрытие модального окна
+          hide: function (modalId) {
+            const modalInstance = modalInstances.get(modalId);
+            if (modalInstance) {
+              modalInstance.hide();
+            } else {
+              // Fallback
+              const modalElement = document.getElementById(modalId);
+              if (modalElement) {
+                modalElement.classList.remove('show');
+                modalElement.style.display = 'none';
+                modalElement.setAttribute('aria-hidden', 'true');
+                modalElement.removeAttribute('aria-modal');
+                modalElement.removeAttribute('role');
+                cleanupOrphanedBackdrops();
+              }
+            }
+          },
+
+          // Принудительная очистка
+          cleanup: cleanupOrphanedBackdrops,
+        };
+
+        // Backward compatibility
+        window.showModal = window.ModalSystem.show;
+        window.hideModal = window.ModalSystem.hide;
+        window.initModal = window.ModalSystem.init;
+        window.cleanupModalBackdrop = window.ModalSystem.cleanup;
+
+        // Автоинициализация при загрузке DOM
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initModalSystem);
+        } else {
+          initModalSystem();
+        }
+      })();
+    </script>
+
+    <script src="{{ url_for('static', filename='alert-modal.js') }}"></script>
+
+    <!-- Base JS (extracted from inline) -->
+    <script
+      src="{{ url_for('static', filename='js/base/navbar.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/base/modal.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/base/ui.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/base/csrf.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/base/status_badge.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/base/audit.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/base/accessibility.js') }}"
+      defer
+    ></script>
+
+    <!-- CSRF Helper Script -->
+    <script type="application/json" data-disabled="true">
+      // Получение CSRF токена
+      function getCSRFToken() {
+        return document
+          .querySelector('meta[name="csrf-token"]')
+          .getAttribute('content');
+      }
+
+      // Запрос нового CSRF токена у сервера
+      function refreshCSRFToken() {
+        return fetch('/refresh_csrf', { credentials: 'same-origin' })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.csrf_token) {
+              document
+                .querySelector('meta[name="csrf-token"]')
+                .setAttribute('content', data.csrf_token);
+              document
+                .querySelectorAll('input[name="csrf_token"]')
+                .forEach((el) => {
+                  el.value = data.csrf_token;
+                });
+              window.CSRF_TOKEN = data.csrf_token;
+              console.log('CSRF токен обновлен');
+            }
+          })
+          .catch((err) => {
+            console.error('Не удалось обновить CSRF токен', err);
+          });
+      }
+
+      // Обработчик CSRF ошибок для fetch
+      function handleCSRFError(response) {
+        if (response.status === 400) {
+          response
+            .json()
+            .then((data) => {
+              if (data.csrf_error) {
+                alert('Ошибка безопасности. Страница будет обновлена.');
+                location.reload();
+              }
+            })
+            .catch(() => {});
+          return true;
+        }
+        return false;
+      }
+
+      // нициализация обработчиков модальных окон (упрощенная версия)
+      function initializeModalHandlers() {
+        // Новая система модальных окон уже инициализирована выше
+        // Здесь только дополнительные обработчики если нужны
+        console.log(
+          'Обработчики модальных окон инициализированы через ModalSystem'
+        );
+
+        // Принудительная установка правильного z-index для navbar
+        enforceNavbarZIndex();
+      }
+
+      // Принудительная установка правильного z-index для navbar
+      function enforceNavbarZIndex() {
+        const navbar = document.querySelector('.navbar');
+        if (navbar) {
+          // Очень агрессивно устанавливаем z-index
+          navbar.style.setProperty('z-index', '1031', 'important');
+          navbar.style.setProperty('position', 'relative', 'important');
+
+          // Удаляем любые классы которые могут повлиять на z-index
+          navbar.classList.remove('fixed-top', 'sticky-top');
+
+          console.log('Навбар z-index установлен на 1031');
+
+          // Наблюдаем за изменениями стиля navbar
+          const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+              if (
+                mutation.type === 'attributes' &&
+                (mutation.attributeName === 'style' ||
+                  mutation.attributeName === 'class')
+              ) {
+                const currentZIndex = window.getComputedStyle(navbar).zIndex;
+                if (currentZIndex !== '1031' && currentZIndex !== 'auto') {
+                  console.log(
+                    'справляем z-index navbar с',
+                    currentZIndex,
+                    'на 1031'
+                  );
+                  navbar.style.setProperty('z-index', '1031', 'important');
+                  navbar.style.setProperty('position', 'relative', 'important');
+                }
+              }
+            });
+          });
+
+          observer.observe(navbar, {
+            attributes: true,
+            attributeFilter: ['style', 'class'],
+          });
+
+          // Проверяем каждую секунду что z-index правильный
+          setInterval(() => {
+            const currentZIndex = window.getComputedStyle(navbar).zIndex;
+            if (currentZIndex !== '1031' && currentZIndex !== 'auto') {
+              console.log('Периодическая проверка: исправляем z-index navbar');
+              navbar.style.setProperty('z-index', '1031', 'important');
+              navbar.style.setProperty('position', 'relative', 'important');
+            }
+          }, 1000);
+        }
+      }
+
+      // нициализируем при загрузке
+      document.addEventListener('DOMContentLoaded', function () {
+        initializeModalHandlers();
+        window.CSRF_TOKEN = getCSRFToken();
+        // Периодическое обновление CSRF токена каждые 10 минут
+        setInterval(refreshCSRFToken, 10 * 60 * 1000);
+      });
+
+      // Helper для безопасных POST запросов
+      function csrfFetch(url, options = {}) {
+        const csrfToken = getCSRFToken();
+
+        const defaultOptions = {
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          credentials: 'same-origin',
+        };
+
+        // Объединяем опции
+        const mergedOptions = {
+          ...defaultOptions,
+          ...options,
+          headers: {
+            ...defaultOptions.headers,
+            ...options.headers,
+          },
+        };
+
+        // Добавляем токен в тело запроса
+        if (mergedOptions.body instanceof FormData) {
+          mergedOptions.body.set('csrf_token', csrfToken);
+        } else if (mergedOptions.body instanceof URLSearchParams) {
+          mergedOptions.body.set('csrf_token', csrfToken);
+        } else if (typeof mergedOptions.body === 'string') {
+          if (mergedOptions.headers['Content-Type'] === 'application/json') {
+            try {
+              const data = JSON.parse(mergedOptions.body);
+              data.csrf_token = csrfToken;
+              mergedOptions.body = JSON.stringify(data);
+            } catch (e) {
+              const params = new URLSearchParams(mergedOptions.body);
+              params.set('csrf_token', csrfToken);
+              mergedOptions.body = params.toString();
+            }
+          } else {
+            const params = new URLSearchParams(mergedOptions.body);
+            params.set('csrf_token', csrfToken);
+            mergedOptions.body = params.toString();
+          }
+        } else if (!mergedOptions.body) {
+          mergedOptions.body = `csrf_token=${encodeURIComponent(csrfToken)}`;
+        }
+
+        return fetch(url, mergedOptions).then((response) => {
+          if (!response.ok && !handleCSRFError(response)) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response;
+        });
+      }
+
+      // Обертка для стандартного fetch
+      const originalFetch = window.fetch;
+      window.fetch = function (url, options = {}) {
+        options.credentials = options.credentials || 'same-origin';
+
+        // Для POST/PUT/DELETE запросов автоматически добавляем CSRF токен
+        if (
+          options.method &&
+          ['POST', 'PUT', 'DELETE', 'PATCH'].includes(
+            options.method.toUpperCase()
+          )
+        ) {
+          options.headers = options.headers || {};
+          const csrfToken = getCSRFToken();
+          if (!options.headers['X-CSRFToken']) {
+            options.headers['X-CSRFToken'] = csrfToken;
+          }
+
+          // Добавляем токен в тело
+          if (options.body instanceof FormData) {
+            options.body.set('csrf_token', csrfToken);
+          } else if (options.body instanceof URLSearchParams) {
+            options.body.set('csrf_token', csrfToken);
+          } else if (typeof options.body === 'string') {
+            if (options.headers['Content-Type'] === 'application/json') {
+              try {
+                const data = JSON.parse(options.body);
+                data.csrf_token = csrfToken;
+                options.body = JSON.stringify(data);
+              } catch (e) {
+                const params = new URLSearchParams(options.body);
+                params.set('csrf_token', csrfToken);
+                options.body = params.toString();
+                options.headers['Content-Type'] =
+                  'application/x-www-form-urlencoded';
+              }
+            } else {
+              const params = new URLSearchParams(options.body);
+              params.set('csrf_token', csrfToken);
+              options.body = params.toString();
+            }
+          } else if (!options.body) {
+            options.body = `csrf_token=${encodeURIComponent(csrfToken)}`;
+            options.headers['Content-Type'] =
+              'application/x-www-form-urlencoded';
+          }
+        }
+
+        return fetchRetry(url, options, 2, 10000, originalFetch).then(
+          (response) => {
+            if (!response.ok) {
+              if (
+                typeof url === 'string' &&
+                url.startsWith('/api/v1/audit/event')
+              ) {
+                return response;
+              }
+              handleCSRFError(response);
+            }
+            return response;
+          }
+        );
+      };
+
+      // Универсальная обертка с таймаутом и повторными попытками
+      async function fetchRetry(
+        input,
+        init = {},
+        retries = 2,
+        timeout = 10000,
+        fetchImpl = fetch
+      ) {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeout);
+          try {
+            const resp = await fetchImpl(input, {
+              ...init,
+              signal: controller.signal,
+            });
+            clearTimeout(timer);
+            if (!resp.ok && attempt < retries) {
+              await new Promise((r) => setTimeout(r, 2 ** attempt * 1000));
+              continue;
+            }
+            return resp;
+          } catch (err) {
+            clearTimeout(timer);
+            if (attempt === retries) throw err;
+            await new Promise((r) => setTimeout(r, 2 ** attempt * 1000));
+          }
+        }
+      }
+
+      // Безопасная обертка над fetch с обработкой 401 и 5xx
+      async function safeFetch(input, init = {}) {
+        try {
+          const r = await fetchRetry(input, init, 2, 10000, originalFetch);
+
+          // Мягкая обработка перезапуска сервера
+          if ([502, 503, 504].includes(r.status)) {
+            if (init.__isBackgroundPoll) {
+              if (typeof window.stopPolling === 'function') {
+                window.stopPolling();
+              }
+              showToast('Сервер перезапускается, подождите…');
+              return r;
+            }
+            throw new Error('SERVER_RESTART');
+          }
+
+          // Обработка истекшей сессии
+          if (r.status === 401) {
+            if (init.__isBackgroundPoll) {
+              if (typeof window.stopPolling === 'function') {
+                window.stopPolling();
+              }
+              showToast('Сессия истекла. Обновите страницу.');
+              return r;
+            } else {
+              showReauthModal();
+              throw new Error('AUTH_EXPIRED');
+            }
+          }
+          return r;
+        } catch (err) {
+          if (init.__isBackgroundPoll) {
+            if (typeof window.stopPolling === 'function') {
+              window.stopPolling();
+            }
+            showToast('Сеть недоступна, подождите…');
+            return new Response('', { status: 0, statusText: 'Network error' });
+          }
+          throw err;
+        }
+      }
+
+      function showReauthModal() {
+        showToast('Требуется повторный вход', 'warning', 5000);
+      }
+    </script>
+
+    <script type="application/json" data-disabled="true">
+      (function () {
+        const send = (name, data) => {
+          fetch('/api/v1/audit/event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-Request-Id':
+                window.__rid ||
+                (window.__rid = crypto.randomUUID?.() || String(Date.now())),
+            },
+            body: JSON.stringify({ name, data }),
+            keepalive: true,
+          }).catch(() => {});
+        };
+
+        let lastAuditClickTs = 0;
+        document.addEventListener(
+          'click',
+          (e) => {
+            const now = Date.now();
+            if (now - lastAuditClickTs < 250) return;
+            lastAuditClickTs = now;
+
+            const t = e.target.closest(
+              '[data-audit], a, button, input, [role="button"]'
+            );
+            if (!t) return;
+
+            const id = t.id || '';
+            const href = t.getAttribute && t.getAttribute('href');
+            if (id === 'userDropdown' || href === '#') return;
+
+            const info = {
+              tag: t.tagName,
+              id: id || null,
+              cls: t.className || null,
+              href: href,
+              name:
+                t.getAttribute &&
+                (t.getAttribute('data-audit') ||
+                  t.getAttribute('name') ||
+                  t.textContent?.trim()?.slice(0, 64)),
+              path: location.pathname,
+            };
+            send('click', info);
+          },
+          { capture: true }
+        );
+
+        const pushState = history.pushState;
+        history.pushState = function () {
+          pushState.apply(this, arguments);
+          send('nav', { path: location.pathname });
+        };
+        window.addEventListener('popstate', () =>
+          send('nav', { path: location.pathname })
+        );
+
+        window.addEventListener('error', (e) => {
+          send('js_error', {
+            msg: e.message,
+            src: e.filename,
+            line: e.lineno,
+            col: e.colno,
+          });
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+          send('js_unhandledrejection', { reason: String(e.reason) });
+        });
+      })();
+    </script>
+
+    <script type="application/json" data-disabled="true">
+      document.addEventListener('DOMContentLoaded', () => {
+        const userDropdown = document.getElementById('userDropdown');
+        if (userDropdown) {
+          userDropdown.addEventListener('shown.bs.dropdown', () =>
+            userDropdown.setAttribute('aria-expanded', 'true')
+          );
+          userDropdown.addEventListener('hidden.bs.dropdown', () =>
+            userDropdown.setAttribute('aria-expanded', 'false')
+          );
+        }
+      });
+    </script>
+    <script>
+      // Переключение светлой/тёмной темы
+      document.addEventListener('DOMContentLoaded', () => {
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        if (!toggle || !icon) return;
+        if (document.documentElement.getAttribute('data-theme') === 'dark') {
+          icon.classList.remove('bi-moon');
+          icon.classList.add('bi-sun');
+        }
+        toggle.addEventListener('click', () => {
+          const isDark =
+            document.documentElement.getAttribute('data-theme') === 'dark';
+          const newTheme = isDark ? 'light' : 'dark';
+          localStorage.setItem('theme', newTheme);
+          if (newTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (!document.getElementById('dark-theme')) {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.id = 'dark-theme';
+              link.href = "{{ url_for('static', filename='dark-theme.css') }}";
+              document.head.appendChild(link);
+            }
+            document
+              .querySelector('meta[name="theme-color"]')
+              .setAttribute('content', '#111827');
+            icon.classList.remove('bi-moon');
+            icon.classList.add('bi-sun');
+          } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            const link = document.getElementById('dark-theme');
+            if (link) link.remove();
+            document
+              .querySelector('meta[name="theme-color"]')
+              .setAttribute('content', '{{ THEME_COLOR }}');
+            icon.classList.remove('bi-sun');
+            icon.classList.add('bi-moon');
+          }
+        });
+      });
+    </script>
+
+    {% if current_user.is_authenticated and current_user.role == 'demo' %}
+    <script src="{{ url_for('static', filename='js/demo-mode.js') }}" defer></script>
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+
+    <footer class="text-center text-muted py-3">
+      Версия {{ APP_VERSION }}
+    </footer>
+
+    <!-- Глобальный лоадер -->
+    <div
+      id="global-loader"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 99999;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      "
+    >
+      <div
+        class="spinner-border text-light"
+        style="width: 4rem; height: 4rem"
+        role="status"
+      >
+        <span class="visually-hidden">Загрузка...</span>
+      </div>
+      <p class="text-light mt-3 mb-0" style="font-size: 1.1rem">
+        Обработка запроса...
+      </p>
+    </div>
+  </body>
+</html>

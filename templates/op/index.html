@@ -1,0 +1,229 @@
+{% extends 'base.html' %} {% block title %}OP{% endblock %} {% block extra_css
+%} {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/op.css') }}" />
+{% endblock %} {% block content %}
+<div
+  class="container mt-4"
+  id="op-root"
+  data-search-url="{{ url_for('search.search_objects') }}"
+  data-view-request-url-template="{{ url_for('request_crud.view_request', id=0) }}"
+  {%
+  if
+  obj
+  %}
+  data-object-id="{{ obj.id }}"
+  data-object-name="{{ obj.name }}"
+  {%
+  endif
+  %}
+>
+  <!-- Поиск и выбор объекта -->
+  <div id="op-search-container" class="mb-3">
+    <div class="card shadow-hover slide-down op-search-card">
+      <div class="card-body">
+        <label for="op-search" class="form-label mb-1">Поиск объекта</label>
+        <div class="input-group">
+          <input
+            type="text"
+            id="op-search"
+            class="form-control form-control-lg"
+            placeholder="Начните вводить название или адрес (мин. 2 символа)"
+            autocomplete="off"
+          />
+          <button class="btn btn-primary" id="op-select-btn" type="button">
+            Выбрать
+          </button>
+        </div>
+        <small class="text-muted">Введите не менее 2 символов</small>
+        <div id="op-suggest-list" class="op-suggest-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="op-content" class="d-none">
+    <!-- Карточка выбранного объекта -->
+    <div id="op-object-card" class="card shadow-hover mb-3"></div>
+
+    <!-- Управление: группы, комментарии, файлы, КП -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div id="op-groups" class="op-groups"></div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Комментарии</h5>
+            <form id="op-comment-form" class="mb-3">
+              <textarea
+                id="op-comment-text"
+                class="form-control mb-2"
+                rows="3"
+                placeholder="Введите комментарий"
+              ></textarea>
+              <button type="submit" class="btn btn-primary">
+                Добавить комментарий
+              </button>
+            </form>
+            <div id="op-comments"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Файлы</h5>
+            <div
+              id="op-files-dropzone"
+              class="op-dropzone border p-3 mb-3 text-center"
+            >
+              Перетащите файлы сюда или нажмите для выбора
+              <input type="file" id="op-file-input" class="d-none" multiple />
+            </div>
+            <div id="op-files" class="mb-3"></div>
+
+            <div class="kp-section mt-3">
+              <h5 class="mb-2 text-center">КП</h5>
+              <div id="op-kp" class="row gx-2 gy-2">
+                <div class="col-12 col-md-6 kp-side" data-side="OV">
+                  <div class="accordion" id="kp-acc-OV">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="kp-head-OV">
+                        <button
+                          class="accordion-button collapsed"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#kp-collapse-OV"
+                          aria-expanded="true"
+                          aria-controls="kp-collapse-OV"
+                        >
+                          ОВ
+                        </button>
+                      </h2>
+                      <div
+                        id="kp-collapse-OV"
+                        class="accordion-collapse collapse show"
+                        aria-labelledby="kp-head-OV"
+                      >
+                        <div class="accordion-body p-0">
+                          <table
+                            class="table table-sm table-bordered kp-table mb-0 w-100"
+                          >
+                            <thead>
+                              <tr>
+                                <th>Категория</th>
+                                <th>Сумма</th>
+                                <th style="width: 40px" class="text-center">
+                                  &nbsp;
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody class="kp-rows"></tbody>
+                            <tfoot>
+                              <tr>
+                                <td colspan="3" class="text-end">
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary kp-add"
+                                    data-side="OV"
+                                  >
+                                    Добавить строку
+                                  </button>
+                                </td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6 kp-side" data-side="VK">
+                  <div class="accordion" id="kp-acc-VK">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="kp-head-VK">
+                        <button
+                          class="accordion-button collapsed"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#kp-collapse-VK"
+                          aria-expanded="true"
+                          aria-controls="kp-collapse-VK"
+                        >
+                          ВК
+                        </button>
+                      </h2>
+                      <div
+                        id="kp-collapse-VK"
+                        class="accordion-collapse collapse show"
+                        aria-labelledby="kp-head-VK"
+                      >
+                        <div class="accordion-body p-0">
+                          <table
+                            class="table table-sm table-bordered kp-table mb-0 w-100"
+                          >
+                            <thead>
+                              <tr>
+                                <th>Категория</th>
+                                <th>Сумма</th>
+                                <th style="width: 40px" class="text-center">
+                                  &nbsp;
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody class="kp-rows"></tbody>
+                            <tfoot>
+                              <tr>
+                                <td colspan="3" class="text-end">
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary kp-add"
+                                    data-side="VK"
+                                  >
+                                    Добавить строку
+                                  </button>
+                                </td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно заявок -->
+  <div class="modal fade" id="requestsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Заявки</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Закрыть"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <ul id="requests-list" class="list-group">
+            <li class="list-group-item text-center text-muted">Загрузка...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %} {{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="{{ url_for('static', filename='js/op.js') }}"></script>
+{% endblock %}

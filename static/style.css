@@ -1,0 +1,294 @@
+/* Основные стили */
+.container {
+  max-width: 1200px;
+}
+
+/* Стили для всплывающих подсказок */
+.suggestions,
+.contractor-suggestions {
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 10%);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  position: absolute;
+  width: 100%;
+  margin-top: 2px;
+  top: 100%;
+  left: 0;
+}
+
+.suggestions {
+  display: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.suggestions.open {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.contractor-suggestions {
+  display: none;
+}
+
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--gray-200);
+  transition: background-color 0.2s ease;
+}
+
+.suggestion-item:hover {
+  background-color: var(--gray-50);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.create-new {
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+.create-new:hover {
+  background-color: var(--gray-200);
+}
+
+/* Стили для мобильных устройств */
+@media (width <= 768px) {
+  .suggestions,
+  .contractor-suggestions {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 10px !important;
+    left: 50% !important;
+    width: 90vw !important;
+    max-height: 300px !important;
+    z-index: 10000 !important;
+  }
+
+  .contractor-suggestions {
+    transform: translateX(-50%) !important;
+  }
+
+  .suggestions {
+    transform: translateX(-50%) translateY(4px) !important;
+  }
+
+  .suggestions.open {
+    transform: translateX(-50%) translateY(0) !important;
+  }
+
+  .suggestion-item {
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .create-new {
+    font-size: 16px;
+  }
+}
+
+/* Стили для контейнеров */
+.contractor-group {
+  position: relative;
+}
+
+/* Стили для кнопки удаления */
+.remove-contractor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+/* Стили для полоски загрузки */
+#loading-bar {
+  height: 4px;
+  display: none;
+}
+
+.progress-bar {
+  transition: width 0.3s ease;
+}
+
+/* Стили для валидации */
+.is-invalid {
+  border-color: var(--danger) !important;
+}
+
+.invalid-feedback {
+  display: none;
+}
+
+.form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+}
+
+/* Стили для карточек */
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgb(0 0 0 / 7.5%);
+  border: 1px solid rgb(0 0 0 / 12.5%);
+  margin-bottom: 1rem;
+}
+
+.card-header {
+  background-color: var(--gray-50);
+  border-bottom: 1px solid rgb(0 0 0 / 12.5%);
+  font-weight: 500;
+}
+
+/* Стили для таблиц */
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  border-top: none;
+  font-weight: 500;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgb(0 0 0 / 5%);
+}
+
+/* Стили для форм */
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+/* Стили для баджей */
+.badge {
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+/* Стили для модальных окон */
+.modal-content {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 15%);
+}
+
+/* Стили для навигации */
+.navbar-brand {
+  font-weight: 600;
+}
+
+/* Стили для адаптивности */
+@media (width <= 576px) {
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .form-control {
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+  }
+}
+
+/* Стили для загрузки */
+.progress {
+  height: 4px;
+  margin-bottom: 0;
+}
+
+/* Стили для скрытых элементов */
+.hidden {
+  display: none !important;
+}
+
+/* Стили для активных элементов */
+.active {
+  background-color: var(--color-primary);
+  color: var(--white);
+}
+
+/* Стили для ошибок */
+.text-danger {
+  color: var(--danger) !important;
+}
+
+/* Стили для успешных сообщений */
+.text-success {
+  color: var(--success) !important;
+}
+
+/* Стили для предупреждений */
+.text-warning {
+  color: var(--warning) !important;
+}
+
+/* Стили для информации */
+.text-info {
+  color: var(--info) !important;
+}
+
+/* Для глобального лоадера */
+#global-loader {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgb(0 0 0 / 60%);
+  z-index: 1080;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+/* Стили для таблицы скриншотов */
+.attachment-table {
+  margin-bottom: 0;
+}
+
+.attachment-table .attachment-cell {
+  min-width: 200px;
+}
+
+.attachment-table .img-thumbnail {
+  max-height: 100px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.attachment-table .img-thumbnail:hover {
+  transform: scale(1.05);
+}
+
+/* Стили для кнопки удаления скриншота */
+.delete-screenshot-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Адаптивность для мобильных */
+@media (width <= 768px) {
+  .attachment-table .img-thumbnail {
+    max-height: 80px;
+  }
+
+  .delete-screenshot-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+}

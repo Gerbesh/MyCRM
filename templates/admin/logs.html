@@ -1,0 +1,22 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-3">
+  <h4>Аудит-логи</h4>
+  <div
+    id="log-wrap"
+    data-url="{{ url_for('admin_logs.logs_data') }}"
+    style="
+      background: var(--gray-900);
+      color: var(--success);
+      padding: 12px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      max-height: 60vh;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 12px;
+    "
+  ></div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='admin-logs.js') }}" defer></script>
+{% endblock %}

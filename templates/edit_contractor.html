@@ -1,0 +1,107 @@
+<!-- templates/edit_contractor.html -->
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h2>Редактировать подрядчика</h2>
+
+  <!-- Форма редактирования -->
+  <form
+    method="POST"
+    action="{{ url_for('contractor.edit_contractor', id=contractor.id, next=next_url) if next_url else url_for('contractor.edit_contractor', id=contractor.id) }}"
+  >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="mb-3">
+      <label for="name" class="form-label">Название подрядчика *</label>
+      <input
+        type="text"
+        class="form-control"
+        id="name"
+        name="name"
+        value="{{ contractor.name }}"
+        required
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="inn" class="form-label">НН</label>
+      <input
+        type="text"
+        class="form-control"
+        id="inn"
+        name="inn"
+        value="{{ contractor.inn }}"
+        placeholder="10 или 12 цифр"
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="contact_person" class="form-label">Контактное лицо</label>
+      <input
+        type="text"
+        class="form-control"
+        id="contact_person"
+        name="contact_person"
+        value="{{ contractor.contact_person }}"
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="phone" class="form-label">Телефон</label>
+      <input
+        type="text"
+        class="form-control"
+        id="phone"
+        name="phone"
+        value="{{ contractor.phone }}"
+        placeholder="+7 (XXX) XXX-XX-XX"
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input
+        type="email"
+        class="form-control"
+        id="email"
+        name="email"
+        value="{{ contractor.email }}"
+      />
+    </div>
+
+    <div class="d-flex gap-2 mt-4">
+      <a
+        href="{{ next_url or url_for('contractor.contractors') }}"
+        class="btn btn-secondary"
+        >Назад</a
+      >
+      <button type="submit" class="btn btn-primary">Сохранить</button>
+      <a
+        href="{{ url_for('contractor.contractors') }}"
+        class="btn btn-secondary"
+        >Отмена</a
+      >
+    </div>
+  </form>
+
+  <!-- Блок удаления (только для админов) -->
+  {% if current_user.role == 'admin' %}
+  <hr class="my-5" />
+  <div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">Опасная зона</h4>
+    <p>Удаление подрядчика невозможно, если он связан с заявками.</p>
+    <form
+      method="POST"
+      action="{{ url_for('contractor.delete_contractor', id=contractor.id) }}"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button
+        type="submit"
+        class="btn btn-danger"
+        data-confirm="Вы уверены, что хотите удалить этого подрядчика? Это действие нельзя отменить."
+      >
+        Удалить подрядчика
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

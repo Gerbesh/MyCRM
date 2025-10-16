@@ -1,0 +1,89 @@
+<!-- templates/edit_object.html -->
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h2>Редактировать объект</h2>
+
+  <!-- Форма редактирования -->
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="mb-3">
+      <label for="name" class="form-label">Название объекта *</label>
+      <input
+        type="text"
+        class="form-control"
+        id="name"
+        name="name"
+        value="{{ object.name }}"
+        required
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="address" class="form-label">Адрес</label>
+      <input
+        type="text"
+        class="form-control"
+        id="address"
+        name="address"
+        value="{{ object.address }}"
+        placeholder="г. Москва, ул. Ленина, д. 1"
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="customer" class="form-label">Заказчик</label>
+      <input
+        type="text"
+        class="form-control"
+        id="customer"
+        name="customer"
+        value="{{ object.customer }}"
+      />
+    </div>
+
+    <div class="mb-3">
+      <label for="phone" class="form-label">Телефон заказчика</label>
+      <input
+        type="text"
+        class="form-control"
+        id="phone"
+        name="phone"
+        value="{{ object.phone }}"
+        placeholder="+7 (XXX) XXX-XX-XX"
+      />
+    </div>
+
+    <div class="d-flex gap-2 mt-4">
+      <button type="button" class="btn btn-secondary" onclick="history.back()">
+        Назад
+      </button>
+      <button type="submit" class="btn btn-primary">Сохранить</button>
+      <a href="{{ url_for('object.objects') }}" class="btn btn-secondary"
+        >Отмена</a
+      >
+    </div>
+  </form>
+
+  <!-- Блок удаления (только для админов) -->
+  {% if current_user.role == 'admin' %}
+  <hr class="my-5" />
+  <div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">Опасная зона</h4>
+    <p>Удаление объекта невозможно, если он связан с заявками.</p>
+    <form
+      method="POST"
+      action="{{ url_for('object.delete_object', id=object.id) }}"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button
+        type="submit"
+        class="btn btn-danger"
+        data-confirm="Вы уверены, что хотите удалить этот объект? Это действие нельзя отменить."
+      >
+        Удалить объект
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

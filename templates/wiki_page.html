@@ -1,0 +1,34 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <aside class="col-lg-3 mb-4">
+    <div class="list-group wiki-sidebar shadow-sm">
+      {% for p in pages %}
+      <a
+        href="{{ url_for('docs.wiki_page', page=p) }}"
+        class="list-group-item list-group-item-action {% if p == current %}active{% endif %}"
+      >
+        {{ p.replace('_', ' ') }}
+      </a>
+      {% endfor %}
+    </div>
+  </aside>
+  <article class="col-lg-9">
+    <div class="card shadow-sm">
+      <div class="card-body wiki-content">{{ content|safe }}</div>
+    </div>
+    {% if current == 'api' %}
+    <div id="openapi-container" class="mt-4"></div>
+    <script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        Redoc.init(
+          '{{ url_for('static', filename='openapi.yaml') }}',
+          {},
+          document.getElementById('openapi-container')
+        );
+      });
+    </script>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}

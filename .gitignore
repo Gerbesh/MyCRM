@@ -1,0 +1,33 @@
+# Игнорирование временных, бинарных и секретных файлов
+__pycache__/
+*.py[cod]
+*.log
+*.env
+.env.local
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.csr
+.encv
+static/uploads/
+instance/
+flask_session/
+# Каталог сессий тестового клиента
+test_sessions/
+*.txt
+project_dump.txt
+
+# Скриншоты интерфейса
+static/img/*.png
+static/restart_menu.png
+/DEPLOY
+/.tooling
+/.venv
+/backup
+/cert
+/tools
+env
+db_dump_*.sql

@@ -1,0 +1,244 @@
+<nav class="navbar navbar-expand-lg shadow-hover">
+  <div class="container">
+    <a
+      class="navbar-brand d-flex align-items-center"
+      href="{{ url_for('main.dashboard') }}"
+    >
+      <i class="bi bi-building me-2" style="font-size: 1.5rem"></i>
+      <span class="gradient-text">Крепления</span>
+    </a>
+
+    <!-- Mobile toggle -->
+    <button
+      class="navbar-toggler border-0"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-label="Открыть меню"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+    >
+      <i
+        class="bi bi-list"
+        style="font-size: 1.5rem; color: var(--color-primary)"
+      ></i>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="navbar-nav ms-auto">
+        <a
+          href="{{ url_for('object.objects') }}"
+          class="nav-link d-flex align-items-center"
+        >
+          <i class="bi bi-geo-alt me-1"></i>
+          Объекты
+        </a>
+        <a
+          href="{{ url_for('contractor.contractors') }}"
+          class="nav-link d-flex align-items-center"
+        >
+          <i class="bi bi-people me-1"></i>
+          Подрядчики
+        </a>
+        {% if current_user.is_authenticated and current_user.role in ['admin',
+        'manager', 'demo'] %}
+        <a
+          href="{{ url_for('op.op_index') }}"
+          class="nav-link d-flex align-items-center"
+          title="объектные продажи"
+        >
+          <i class="bi bi-diagram-3 me-1"></i>
+          ОП
+        </a>
+        {% endif %} {% if current_user.is_authenticated and current_user.role ==
+        'admin' %}
+        <a
+          href="{{ url_for('user.users') }}"
+          class="nav-link d-flex align-items-center"
+        >
+          <i class="bi bi-person-gear me-1"></i>
+          Пользователи
+        </a>
+        <a
+          href="{{ url_for('admin.system_page') }}"
+          class="nav-link d-flex align-items-center"
+          title="Системная информация"
+        >
+          <i class="bi bi-speedometer2 me-1"></i>
+          Система
+        </a>
+        <a
+          href="{{ url_for('admin_logs.logs_page') }}"
+          class="nav-link d-flex align-items-center"
+        >
+          <i class="bi bi-journal-text me-1"></i>
+          Логи
+        </a>
+        <a
+          href="{{ url_for('docs.wiki_page') }}"
+          class="nav-link d-flex align-items-center"
+          title="Документация"
+        >
+          <i class="bi bi-book me-1" style="font-size: 1.2rem"></i>
+          Документация
+        </a>
+        {% endif %}
+        <div class="nav-item">
+          <button
+            id="themeToggle"
+            class="nav-link btn btn-link d-flex align-items-center"
+            type="button"
+            title="Переключить тему"
+          >
+            <i id="themeIcon" class="bi bi-moon theme-icon"></i>
+          </button>
+        </div>
+{% if current_user.is_authenticated %}
+        <!-- Профиль пользователя -->
+        <div class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle d-flex align-items-center"
+            href="#"
+            id="userDropdown"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <div class="user-avatar me-2">
+              <i class="bi bi-person-circle"></i>
+            </div>
+            <span class="d-none d-md-inline">{{ current_user.username }}</span>
+            {% if current_user.role == 'demo' %}
+            <span class="badge rounded-pill bg-warning text-dark ms-2">Демо</span>
+            {% endif %}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+            <li>
+              <h6 class="dropdown-header">
+                <i class="bi bi-person-badge me-1"></i>
+                {{ current_user.username }}
+                {% if current_user.role == 'demo' %}
+                <span class="badge bg-warning text-dark ms-2">Демо</span>
+                {% endif %}
+              </h6>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            {% if current_user.role != 'demo' %}
+            <li>
+              <a
+                class="dropdown-item"
+                href="{{ url_for('main.change_password') }}"
+              >
+                <i class="bi bi-key me-2"></i>
+                Сменить пароль
+              </a>
+            </li>
+            {% endif %}
+            {% if current_user.role == 'demo' %}
+            <li>
+              <span class="dropdown-item-text text-muted">
+                <i class="bi bi-eye me-2"></i>
+                Демо-доступ: изменения недоступны
+              </span>
+            </li>
+            {% endif %}
+            {% if current_user.role == 'admin' %}
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+              <form
+                method="post"
+                action="{{ url_for('admin.create_backup') }}"
+                class="m-0"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                <button
+                  type="submit"
+                  class="dropdown-item"
+                  title="Создать бэкап БД и вложений"
+                >
+                  <i class="bi bi-download me-2"></i>
+                  Скачать бэкап
+                </button>
+              </form>
+            </li>
+            <li>
+              <form
+                method="post"
+                action="{{ url_for('admin.generate_demo_data_action') }}"
+                class="m-0"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                {% set is_demo_disabled = demo_seed_disabled if demo_seed_disabled is not none else False %}
+                <button
+                  id="demoSeedButton"
+                  type="submit"
+                  class="dropdown-item {% if is_demo_disabled %}disabled text-muted{% endif %}"
+                  {% if is_demo_disabled %}
+                  disabled
+                  aria-disabled="true"
+                  title="Тестовая база уже содержит {{ demo_seed_target }} заявок"
+                  {% else %}
+                  title="Создать демо-данные ({{ demo_seed_target }} заявок)"
+                  {% endif %}
+                >
+                  <i class="bi bi-database-add me-2"></i>
+                  Сгенерировать тестовую БД
+                </button>
+              </form>
+            </li>
+            <li>
+              <form
+                method="post"
+                action="{{ url_for('admin.restart_app') }}"
+                class="m-0"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                <button
+                  type="submit"
+                  class="dropdown-item text-danger"
+                  onclick="return confirm('Перезапустить приложение?')"
+                >
+                  <i class="bi bi-arrow-repeat me-2"></i>
+                  Рестарт
+                </button>
+              </form>
+            </li>
+            {% endif %}
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+              <a
+                class="dropdown-item text-danger"
+                href="{{ url_for('auth.logout') }}"
+              >
+                <i class="bi bi-box-arrow-right me-2"></i>
+                Выход
+              </a>
+            </li>
+          </ul>
+        </div>
+        {% else %}
+        <a
+          href="{{ url_for('auth.login') }}"
+          class="nav-link d-flex align-items-center"
+        >
+          <i class="bi bi-box-arrow-in-right me-1"></i>
+          Вход
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>

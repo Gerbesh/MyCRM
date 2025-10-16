@@ -1,0 +1,697 @@
+{% extends "base.html" %} {% block content %}
+<div
+  class="container mt-4"
+  data-is-admin="{{ 'true' if current_user.role == 'admin' else 'false' }}"
+  data-view-request-url-template="{{ url_for('request_crud.view_request', id=0) }}"
+  data-add-object-url="{{ url_for('object.add_object') }}"
+  data-edit-object-url-template="{{ url_for('object.edit_object', id=0) }}"
+  data-delete-object-url-template="{{ url_for('object.delete_object', id=0) }}"
+>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Объекты</h1>
+    <button type="button" class="btn btn-success" id="add-object-btn">
+      Добавить объект
+    </button>
+  </div>
+
+  <!-- Поиск -->
+  <div class="card shadow-hover mb-4 slide-down">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <form
+            method="GET"
+            action="{{ url_for('object.objects') }}"
+            class="d-flex gap-2"
+          >
+            <div class="position-relative flex-grow-1">
+              <input
+                type="text"
+                name="search"
+                class="form-control form-control-lg"
+                placeholder="Поиск по названию, адресу, заказчику..."
+                value="{{ search or '' }}"
+              />
+              <i
+                class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"
+              ></i>
+            </div>
+            <input type="hidden" name="per_page" value="{{ per_page }}" />
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-search me-2"></i>Поиск
+            </button>
+            {% if search %}
+            <a
+              href="{{ url_for('object.objects') }}"
+              class="btn btn-outline-secondary btn-lg"
+            >
+              <i class="bi bi-x-circle me-2"></i>Очистить
+            </a>
+            {% endif %}
+          </form>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <div class="d-flex justify-content-md-end align-items-center gap-3">
+            <div class="text-muted">
+              <i class="bi bi-info-circle me-1"></i>
+              <small
+                >Найдено объектов:
+                <strong id="objects-count"
+                  >{{ pagination.total }}</strong
+                ></small
+              >
+            </div>
+            <form
+              method="get"
+              action="{{ url_for('object.objects') }}"
+              class="d-flex align-items-center"
+            >
+              <input type="hidden" name="search" value="{{ search }}" />
+              <label for="perPage" class="me-2 mb-0">На странице:</label>
+              <select
+                id="perPage"
+                name="per_page"
+                class="form-select form-select-sm w-auto"
+                onchange="this.form.submit()"
+              >
+                {% set selected_per_page = per_page|int %} {% for option in [10,
+                25, 50, 100] %} {% if selected_per_page == option %}
+                <option value="{{ option }}" selected>{{ option }}</option>
+                {% else %}
+                <option value="{{ option }}">{{ option }}</option>
+                {% endif %} {% endfor %}
+              </select>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Переключалка видов -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="view-toggle">
+      <button class="toggle-btn active" data-view="table">
+        <i class="bi bi-table"></i>
+      </button>
+      <button class="toggle-btn" data-view="cards">
+        <i class="bi bi-grid-3x3-gap"></i>
+      </button>
+    </div>
+    <div class="text-muted">
+      <small
+        ><i class="bi bi-eye me-1"></i>Вид:
+        <span id="current-view">Таблица</span></small
+      >
+    </div>
+  </div>
+
+  <!-- Таблица -->
+  <div id="objects-table-skeleton" class="mb-3">
+    {% for _ in range(3) %}
+    <div class="skeleton skeleton-text long"></div>
+    {% endfor %}
+  </div>
+  <div id="objects-table" class="table-view d-none">
+    {% if objects %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>Адрес</th>
+            <th>Заказчик</th>
+            <th>Телефон</th>
+            <th>Заявки</th>
+            {% if current_user.role == 'admin' %}
+            <th>Действия</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for obj in objects %}
+          <tr>
+            <td>{{ obj.name }}</td>
+            <td data-url="{{ url_for('op.op_object', object_id=obj.id) }}">
+              {{ obj.address or '—' }}
+            </td>
+            <td>{{ obj.customer or '—' }}</td>
+            <td>{{ obj.phone or '—' }}</td>
+            <td>
+              <button
+                class="btn btn-sm btn-info"
+                data-bs-toggle="modal"
+                data-bs-target="#requestsModal"
+                data-object-id="{{ obj.id }}"
+                data-object-name="{{ obj.name }}"
+              >
+                Заявок: {{ obj.request_count }}
+              </button>
+            </td>
+            {% if current_user.role == 'admin' %}
+            <td>
+              <a
+                href="{{ url_for('object.edit_object', id=obj.id) }}"
+                class="btn btn-sm btn-primary"
+                >Редактировать</a
+              >
+              <form
+                method="POST"
+                action="{{ url_for('object.delete_object', id=obj.id) }}"
+                style="display: inline"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-danger"
+                  data-confirm="Вы уверены, что хотите удалить объект? Это действие нельзя отменить."
+                >
+                  Удалить
+                </button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">Объекты не найдены.</p>
+    {% endif %}
+
+    <!-- Пагинация -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Пагинация объектов">
+      <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('object.objects', page=pagination.prev_num, search=search, per_page=per_page) }}"
+            aria-label="Предыдущая"
+          >
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Предыдущая">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% endif %} {% for page_num in pagination.iter_pages() %} {% if page_num
+        %} {% if page_num != pagination.page %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('object.objects', page=page_num, search=search, per_page=per_page) }}"
+            >{{ page_num }}</a
+          >
+        </li>
+        {% else %}
+        <li class="page-item active">
+          <a class="page-link" href="#">{{ page_num }}</a>
+        </li>
+        {% endif %} {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#">…</a>
+        </li>
+        {% endif %} {% endfor %} {% if pagination.has_next %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('object.objects', page=pagination.next_num, search=search, per_page=per_page) }}"
+            aria-label="Следующая"
+          >
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Следующая">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+
+  <!-- Карточки -->
+  <div
+    id="objects-cards-skeleton"
+    class="row row-cols-1 row-cols-md-3 g-3 mb-3 d-none"
+  >
+    {% for _ in range(3) %}
+    <div class="col">
+      <div class="card p-3">
+        <div class="skeleton skeleton-text long"></div>
+        <div class="skeleton skeleton-text short"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div id="objects-cards" class="d-none">
+    {% for obj in objects %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">
+          <a
+            href="{{ url_for('op.op_object', object_id=obj.id) }}"
+            class="link-primary text-decoration-none"
+            >{{ obj.name }}</a
+          >
+        </h5>
+        {% if obj.address %}
+        <p><strong>Адрес:</strong> {{ obj.address }}</p>
+        {% endif %} {% if obj.customer %}
+        <p><strong>Заказчик:</strong> {{ obj.customer }}</p>
+        {% endif %} {% if obj.phone %}
+        <p><strong>Телефон:</strong> {{ obj.phone }}</p>
+        {% endif %}
+        <p>
+          <strong>Заявки:</strong>
+          <button
+            class="btn btn-sm btn-info"
+            data-bs-toggle="modal"
+            data-bs-target="#requestsModal"
+            data-object-id="{{ obj.id }}"
+            data-object-name="{{ obj.name }}"
+          >
+            {{ obj.request_count }}
+          </button>
+        </p>
+        {% if current_user.role == 'admin' %}
+        <div class="d-flex gap-2">
+          <a
+            href="{{ url_for('object.edit_object', id=obj.id) }}"
+            class="btn btn-sm btn-primary"
+            >Редактировать</a
+          >
+          <form
+            method="POST"
+            action="{{ url_for('object.delete_object', id=obj.id) }}"
+            style="display: inline"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button
+              type="submit"
+              class="btn btn-sm btn-danger"
+              data-confirm="Удалить?"
+            >
+              Удалить
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Пагинация для карточек -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Пагинация объектов">
+      <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('object.objects', page=pagination.prev_num, search=search, per_page=per_page) }}"
+            aria-label="Предыдущая"
+          >
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Предыдущая">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% endif %} {% for page_num in pagination.iter_pages() %} {% if page_num
+        %} {% if page_num != pagination.page %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('object.objects', page=page_num, search=search, per_page=per_page) }}"
+            >{{ page_num }}</a
+          >
+        </li>
+        {% else %}
+        <li class="page-item active">
+          <a class="page-link" href="#">{{ page_num }}</a>
+        </li>
+        {% endif %} {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#">…</a>
+        </li>
+        {% endif %} {% endfor %} {% if pagination.has_next %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('object.objects', page=pagination.next_num, search=search, per_page=per_page) }}"
+            aria-label="Следующая"
+          >
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Следующая">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Модальное окно для заявок -->
+<!-- Модальное окно добавления объекта -->
+<div class="modal fade" id="addObjectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="add-object-form">
+        <div class="modal-header">
+          <h5 class="modal-title">Новый объект</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Закрыть"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="object-name" class="form-label">Название</label>
+            <input type="text" class="form-control" id="object-name" required />
+            <div class="invalid-feedback" id="object-name-error"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Отмена
+          </button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для заявок -->
+<div class="modal fade" id="requestsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Заявки</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <ul id="requests-list" class="list-group">
+          <li class="list-group-item text-center text-muted">Загрузка...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script type="application/json" data-disabled="true">
+  const VIEW_REQUEST_BASE = '{{ url_for("request_crud.view_request", id=0)[:-1] }}';
+  document.addEventListener('DOMContentLoaded', () => {
+      const tableView = document.getElementById('objects-table');
+      const cardsView = document.getElementById('objects-cards');
+      const buttons = document.querySelectorAll('[data-view]');
+
+      if (!tableView || !cardsView || buttons.length === 0) return;
+
+      buttons.forEach(btn => {
+          btn.addEventListener('click', () => {
+              const currentViewSpan = document.getElementById('current-view');
+              if (btn.getAttribute('data-view') === 'cards') {
+                  tableView.classList.add('d-none');
+                  cardsView.classList.remove('d-none');
+                  if (currentViewSpan) currentViewSpan.textContent = 'Карточки';
+              } else {
+                  cardsView.classList.add('d-none');
+                  tableView.classList.remove('d-none');
+                  if (currentViewSpan) currentViewSpan.textContent = 'Таблица';
+              }
+              buttons.forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+          });
+      });
+
+      // Модалка заявок — использование новой системы
+      const modal = document.getElementById('requestsModal');
+      if (!modal) return;
+
+      // спользуем новую систему модальных окон
+
+      modal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget;
+          const objectId = button.getAttribute('data-object-id');
+          const name = button.getAttribute('data-object-name');
+          const list = document.getElementById('requests-list');
+          list.innerHTML = '<li class="list-group-item text-center text-muted">Загрузка...</li>';
+
+          modal.querySelector('.modal-title').textContent = `Заявки: ${name}`;
+
+          fetch(`/api/v1/requests/by_object/${objectId}`)
+              .then(response => {
+                  console.log('Response status:', response.status);
+                  if (!response.ok) {
+                      if (response.status === 404) {
+                          throw new Error('API endpoint not found');
+                      } else if (response.status === 500) {
+                          throw new Error('Server error');
+                      } else {
+                          throw new Error(`HTTP error! status: ${response.status}`);
+                      }
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  list.innerHTML = '';
+                  data = Array.isArray(data) ? data : (data && Array.isArray(data.data) ? data.data : []);
+                  if (!data || data.length === 0) {
+                      list.innerHTML = '<li class="list-group-item text-center text-muted">Нет заявок</li>';
+                      return;
+                  }
+                  data.forEach(req => {
+                      const code = String(req.status || '').toUpperCase();
+                      const statusClass = code === '{{ RequestStatus.DONE.value }}' ? 'bg-success' : 'bg-warning';
+                      const date = new Date(req.created_at).toLocaleDateString('ru-RU');
+                      const contractorsHtml = req.contractors.map(c =>
+                          `<span class="badge bg-primary me-1">${c.name}</span>`
+                      ).join('');
+
+                      const manufacturersHtml = req.manufacturers.map(m =>
+                          `<span class="badge bg-info me-1">${m}</span>`
+                      ).join('');
+
+                      const item = document.createElement('li');
+                      item.className = 'list-group-item';
+                      item.innerHTML = `
+                          <div class="d-flex justify-content-between mb-2">
+                              <strong>Заявка #${req.id}</strong>
+                              <span class="badge ${statusClass}">${window.STATUS_LABELS_RU?.[(req.status || '').toUpperCase()] || req.status}</span>
+                          </div>
+                          <div class="mb-1"><small><strong>Подрядчики:</strong></small><br>${contractorsHtml}</div>
+                          <div class="mb-1"><small><strong>Производители:</strong></small><br>${manufacturersHtml}</div>
+                          <div class="text-muted small">от ${date}</div>
+                          <div class="text-end mt-2">
+                              <a href="${VIEW_REQUEST_BASE}${req.id}" class="btn btn-sm btn-outline-primary">Открыть</a>
+                          </div>
+                      `;
+                      list.appendChild(item);
+                  });
+              })
+              .catch(err => {
+                  console.error('Error loading requests:', err);
+                  list.innerHTML = `<li class="list-group-item text-center text-danger">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      Ошибка загрузки заявок: ${err.message}
+                      <br><small class="text-muted">Попробуйте обновить страницу</small>
+                  </li>`;
+
+                  // Добавляем кнопку повторной попытки
+                  const retryBtn = document.createElement('button');
+                  retryBtn.className = 'btn btn-sm btn-outline-primary mt-2';
+                  retryBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Повторить';
+                  retryBtn.onclick = () => {
+                      window.ModalSystem.hide('requestsModal');
+                      setTimeout(() => {
+                          const triggerBtn = document.querySelector(`[data-object-id="${objectId}"]`);
+                          if (triggerBtn) triggerBtn.click();
+                      }, 100);
+                  };
+                  list.querySelector('li').appendChild(retryBtn);
+              });
+      });
+
+      // нициализируем модальное окно через новую систему
+      window.ModalSystem.init(modal);
+
+      // Добавляем обработчики для правильного закрытия модального окна
+      modal.addEventListener('hidden.bs.modal', function () {
+          // Очищаем содержимое при закрытии
+          const list = document.getElementById('requests-list');
+          if (list) {
+              list.innerHTML = '<li class="list-group-item text-center text-muted">Загрузка...</li>';
+          }
+
+          // Убеждаемся, что backdrop удален
+          const backdrops = document.querySelectorAll('.modal-backdrop');
+          backdrops.forEach(backdrop => backdrop.remove());
+
+          // Восстанавливаем скролл body
+          document.body.classList.remove('modal-open');
+          document.body.style.overflow = '';
+          document.body.style.paddingRight = '';
+      });
+
+      // Обработчик для кнопки закрытия
+      const closeBtn = modal.querySelector('[data-bs-dismiss="modal"]');
+      if (closeBtn) {
+          closeBtn.addEventListener('click', function() {
+              window.ModalSystem.hide('requestsModal');
+              setTimeout(() => {
+                  if (window.cleanupModalBackdrop) {
+                      window.cleanupModalBackdrop();
+                  }
+              }, 200);
+          });
+      }
+
+      // Закрытие по клику на backdrop
+      modal.addEventListener('click', function(event) {
+          if (event.target === modal) {
+              window.ModalSystem.hide('requestsModal');
+          }
+      });
+
+      // Настройка модального окна добавления объекта
+      const addObjectBtn = document.getElementById('add-object-btn');
+      const addObjectModalEl = document.getElementById('addObjectModal');
+      const addObjectForm = document.getElementById('add-object-form');
+      const objectNameInput = document.getElementById('object-name');
+      const objectNameError = document.getElementById('object-name-error');
+      const isAdmin = {{ 'true' if current_user.role == 'admin' else 'false' }};
+
+      if (addObjectBtn && addObjectModalEl && addObjectForm) {
+          const addObjectModal = new bootstrap.Modal(addObjectModalEl);
+
+          addObjectBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              addObjectForm.reset();
+              objectNameInput.classList.remove('is-invalid');
+              objectNameError.textContent = '';
+              addObjectModal.show();
+          });
+
+          addObjectForm.addEventListener('submit', function (e) {
+              e.preventDefault();
+              const name = objectNameInput.value.trim();
+              if (!name) {
+                  objectNameInput.classList.add('is-invalid');
+                  objectNameError.textContent = 'Название обязательно';
+                  return;
+              }
+
+              const formData = new FormData();
+              formData.append('name', name);
+              formData.append('csrf_token', '{{ csrf_token() }}');
+
+              fetch('{{ url_for("object.add_object") }}', {
+                  method: 'POST',
+                  body: formData
+              })
+                  .then(response => response.json())
+                  .then(data => {
+                      if (data.error) {
+                          objectNameInput.classList.add('is-invalid');
+                          objectNameError.textContent = data.error;
+                      } else {
+                          addObjectModal.hide();
+                          appendObjectRow(data);
+                      }
+                  })
+                  .catch(error => {
+                      console.error('Ошибка:', error);
+                      objectNameInput.classList.add('is-invalid');
+                      objectNameError.textContent = 'Сервер недоступен';
+                  });
+          });
+      }
+
+      // Добавление нового объекта в таблицу и карточки без перезагрузки
+      function appendObjectRow(data) {
+          const countEl = document.getElementById('objects-count');
+          if (countEl) {
+              countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+          }
+
+          const tableBody = document.querySelector('#objects-table tbody');
+          if (tableBody) {
+              const row = document.createElement('tr');
+              let adminActions = '';
+              if (isAdmin) {
+                  const editUrl = '{{ url_for("object.edit_object", id=0) }}'.replace('0', data.id);
+                  const deleteUrl = '{{ url_for("object.delete_object", id=0) }}'.replace('0', data.id);
+                  adminActions = `<a href="${editUrl}" class="btn btn-sm btn-primary">Редактировать</a>
+                      <form method="POST" action="${deleteUrl}" style="display:inline;">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                          <button type="submit" class="btn btn-sm btn-danger" data-confirm="Вы уверены, что хотите удалить объект? Это действие нельзя отменить.">Удалить</button>
+                      </form>`;
+              }
+              row.innerHTML = `<td>${data.name}</td><td>—</td><td>—</td><td>—</td>
+                  <td><button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#requestsModal" data-object-id="${data.id}" data-object-name="${data.name}">Заявок: 0</button></td>` + (isAdmin ? `<td>${adminActions}</td>` : '');
+              tableBody.prepend(row);
+          }
+
+          const cards = document.getElementById('objects-cards');
+          if (cards) {
+              const card = document.createElement('div');
+              card.className = 'card mb-3';
+              let adminBlock = '';
+              if (isAdmin) {
+                  const editUrl = '{{ url_for("object.edit_object", id=0) }}'.replace('0', data.id);
+                  const deleteUrl = '{{ url_for("object.delete_object", id=0) }}'.replace('0', data.id);
+                  adminBlock = `<div class="d-flex gap-2">
+                          <a href="${editUrl}" class="btn btn-sm btn-primary">Редактировать</a>
+                          <form method="POST" action="${deleteUrl}" style="display:inline;">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                              <button type="submit" class="btn btn-sm btn-danger" data-confirm="Удалить?">Удалить</button>
+                          </form>
+                      </div>`;
+              }
+              card.innerHTML = `<div class="card-body">
+                      <h5 class="card-title">${data.name}</h5>
+                      <p><strong>Заявки:</strong> <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#requestsModal" data-object-id="${data.id}" data-object-name="${data.name}">0</button></p>
+                      ${isAdmin ? adminBlock : ''}
+                  </div>`;
+              cards.prepend(card);
+          }
+      }
+  });
+</script>
+<script src="{{ url_for('static', filename='js/objects.js') }}" defer></script>
+{% endblock %}

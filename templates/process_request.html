@@ -1,0 +1,381 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h1 class="h1">Обработка заявки #{{ req.id }}</h1>
+
+  <!-- Основная информация -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center">
+          <strong class="me-2">Объект:</strong>
+          <span class="me-2"
+            >{{ object_info.name if object_info else 'Неизвестный' }}</span
+          >
+          {% if current_user.role == 'admin' or current_user.id ==
+          req.created_by %}
+          <button
+            class="btn btn-sm btn-outline-primary"
+            onclick="changeRequestObject({{ req.id }})"
+            title="зменить объект"
+          >
+            <i class="bi bi-arrow-left-right"></i>
+          </button>
+          {% endif %}
+        </div>
+        {% if object_info %}
+        <small class="text-muted">
+          {% if object_info.address %}<i class="bi bi-geo-alt me-1"></i>{{
+          object_info.address }}{% endif %} {% if object_info.customer %}<br /><i
+            class="bi bi-person me-1"
+          ></i
+          >{{ object_info.customer }}{% endif %}
+        </small>
+        {% endif %}
+      </div>
+      <p>
+        <strong>Производители:</strong>
+        {% for manufacturer in req.manufacturers_list %}
+        <span class="badge bg-primary">{{ manufacturer }}</span>
+        {% endfor %}
+      </p>
+      <p>
+        <strong>Создана:</strong> {{ req.created_at.strftime('%d.%m.%Y %H:%M')
+        }}
+      </p>
+      <p>
+        <strong>Статус:</strong>
+        <span
+          id="request-status-badge"
+          data-status-badge
+          class="status-badge status-{{ status_class(req.status) }}"
+        >
+          {{ status_label(req.status) }}
+        </span>
+      </p>
+      <div class="mb-3" style="max-width: 360px">
+        <label for="status-select" class="form-label">зменить статус</label>
+        <div class="d-flex gap-2">
+          <select id="status-select" name="new_status" class="form-select">
+            {% set current_status = req.status %} {% for s in RequestStatus %}
+            {% if current_status == s.value %}
+            <option value="{{ s.value }}" selected>
+              {{ status_label(s.value) }}
+            </option>
+            {% else %}
+            <option value="{{ s.value }}">{{ status_label(s.value) }}</option>
+            {% endif %} {% endfor %}
+          </select>
+          <button
+            type="button"
+            id="apply-status-btn"
+            data-request-id="{{ req.id }}"
+            class="btn btn-sm btn-outline-primary"
+          >
+            Применить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Форма обработки -->
+  <form
+    method="POST"
+    action="{{ url_for('request_process.submit_process_request', id=req.id) }}"
+    enctype="multipart/form-data"
+  >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <h4>Подрядчики</h4>
+    <div class="row">
+      {% for contractor in contractors %}
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-light">
+            <div class="d-flex align-items-start justify-content-between">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  name="contractor_id"
+                  value="{{ contractor.id }}"
+                  id="contractor_{{ contractor.id }}"
+                  required
+                />
+                <label
+                  class="form-check-label"
+                  for="contractor_{{ contractor.id }}"
+                >
+                  <h5 class="mb-0">{{ contractor.name }}</h5>
+                </label>
+              </div>
+              <div class="text-end">
+                {% if contractor.inn %}
+                <small class="text-muted d-block"
+                  ><i class="bi bi-file-earmark-text me-1"></i>{{ contractor.inn
+                  }}</small
+                >
+                {% endif %} {% if contractor.contact_person %}
+                <small class="text-muted d-block"
+                  ><i class="bi bi-person me-1"></i>{{ contractor.contact_person
+                  }}</small
+                >
+                {% endif %} {% if contractor.phone %}
+                <small class="text-muted d-block"
+                  ><i class="bi bi-telephone me-1"></i>{{ contractor.phone
+                  }}</small
+                >
+                {% endif %} {% if not contractor.inn or not
+                contractor.contact_person or not contractor.phone %}
+                <a
+                  href="{{ url_for('contractor.edit_contractor',
+                                      id=contractor.id,
+                                      next=url_for('request_process.process_request', id=req.id)) }}"
+                  class="btn btn-sm btn-outline-primary mt-1"
+                >
+                  Заполнить данные подрядчика
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div
+            class="card-body contractor-content"
+            data-contractor-id="{{ contractor.id }}"
+            style="display: none"
+          >
+            <!-- Поля для скриншотов по производителям -->
+            <h6>Скриншоты производителей</h6>
+            {% for manufacturer in req.manufacturers_list %}
+            <div class="mb-3">
+              <label class="form-label">
+                <input
+                  type="checkbox"
+                  name="manufacturers[]"
+                  value="{{ manufacturer }}"
+                  class="me-2"
+                />
+                {{ manufacturer }}
+              </label>
+              <input
+                class="form-control mt-2"
+                type="file"
+                name="screenshots[]"
+                accept="image/*"
+              />
+              <small class="text-muted"
+                >Можно вставить скриншот сочетанием Ctrl+V</small
+              >
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Кнопки -->
+    <div class="d-flex gap-2 mt-4">
+      <button type="button" class="btn btn-secondary" onclick="history.back()">
+        Назад
+      </button>
+      <button type="submit" class="btn btn-success">
+        Сохранить и завершить
+      </button>
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary"
+        >Отмена</a
+      >
+    </div>
+  </form>
+
+  <!-- Прикреплённые файлы -->
+  {% if attachments %}
+  <div class="mt-5">
+    <h4>Прикреплённые скриншоты</h4>
+    <table class="table table-bordered attachment-table">
+      <thead>
+        <tr>
+          <th>Подрядчик</th>
+          <th>Производитель</th>
+          <th>Файл</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for attachment in attachments %}
+        <tr id="attachment-row-{{ attachment.id }}">
+          <td>
+            {% set contractor_name = 'Неизвестный' %} {% for contractor in
+            contractors %} {% if contractor.id == attachment.contractor_id %} {%
+            set contractor_name = contractor.name %} {% endif %} {% endfor %} {{
+            contractor_name }}
+          </td>
+          <td>{{ attachment.manufacturer }}</td>
+          <td class="attachment-cell">
+            <a
+              href="{{ url_for('static', filename=attachment.screenshot) }}"
+              target="_blank"
+            >
+              <img
+                src="{{ url_for('static', filename=attachment.screenshot) }}"
+                alt="Скриншот"
+                class="img-thumbnail"
+                style="max-height: 80px"
+              />
+            </a>
+          </td>
+          <td>
+            <button
+              class="btn btn-sm btn-danger delete-screenshot-btn"
+              data-attachment-id="{{ attachment.id }}"
+              data-request-id="{{ req.id }}"
+            >
+              Удалить
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div
+  class="modal fade"
+  id="deleteModal"
+  tabindex="-1"
+  aria-hidden="true"
+  aria-labelledby="deleteModalLabel"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">
+          Подтверждение удаления
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Вы уверены, что хотите удалить этот скриншот? Это действие нельзя
+        отменить.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Отмена
+        </button>
+        <button type="button" class="btn btn-danger" id="confirm-delete-btn">
+          Удалить
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно смены объекта -->
+<div
+  class="modal fade"
+  id="changeObjectModal"
+  tabindex="-1"
+  aria-hidden="true"
+  aria-labelledby="changeObjectModalLabel"
+  data-get-all-objects-url="{{ url_for('api_v1.get_all_objects') }}"
+  data-change-object-url="{{ url_for('request_process.change_request_object', id=req.id) }}"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="changeObjectModalLabel">
+          <i class="bi bi-arrow-left-right me-2"></i>
+          зменить объект заявки
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Текущий объект:</label>
+          <div class="p-2 bg-light rounded">
+            <strong id="current-object-name"
+              >{{ object_info.name if object_info else 'Неизвестный' }}</strong
+            >
+            {% if object_info and object_info.address %}
+            <br /><small class="text-muted"
+              ><i class="bi bi-geo-alt me-1"></i>{{ object_info.address
+              }}</small
+            >
+            {% endif %}
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="new-object-input" class="form-label"
+            >Выберите новый объект:</label
+          >
+          <div class="position-relative">
+            <input
+              type="text"
+              class="form-control"
+              id="new-object-input"
+              placeholder="Начните вводить название объекта..."
+              autocomplete="off"
+            />
+            <div id="object-suggestions" class="autocomplete-suggestions"></div>
+            <div
+              id="object-loading"
+              class="d-none position-absolute"
+              style="top: 50%; right: 10px; transform: translateY(-50%)"
+            >
+              <div
+                class="spinner-border spinner-border-sm text-primary"
+                role="status"
+              >
+                <span class="visually-hidden">Загрузка...</span>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="new-object-id" value="" />
+        </div>
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          <small>
+            Смена объекта изменит привязку заявки к новому объекту. Все
+            существующие файлы и данные будут сохранены.
+            <br /><strong>Найдено объектов:</strong>
+            <span id="objects-count">загрузка...</span>
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Отмена
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="confirm-change-object-btn"
+          disabled
+        >
+          <i class="bi bi-check-lg me-1"></i>
+          зменить объект
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script
+  src="{{ url_for('static', filename='js/process_request.js') }}"
+  defer
+></script>
+{% endblock %}

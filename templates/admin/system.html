@@ -1,0 +1,346 @@
+﻿{% extends "base.html" %}
+{% block title %}Система{% endblock %}
+{% block content %}
+<div class="container py-4 system-info-page">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1 d-flex align-items-center">
+        <i class="bi bi-speedometer2 me-2 text-primary"></i>
+        Системная информация
+      </h1>
+      <p class="text-muted small mb-0">
+        Хост: {{ data.host.hostname or '—' }} · ОС: {{ data.os_pretty }}
+      </p>
+      <p class="text-muted small mb-0">
+        Обновлено {{ data.generated_at }}{% if data.uptime_details.started_at %} · Приложение запущено {{ data.uptime_details.started_at }}{% endif %}
+      </p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2">
+        Версия {{ data.app_version or '—' }}
+      </span>
+      <span class="badge bg-light text-muted border fw-semibold px-3 py-2">
+        Python {{ data.python }} ({{ data.python_impl }})
+      </span>
+      {% if data.framework.flask %}
+      <span class="badge bg-light text-muted border fw-semibold px-3 py-2">
+        Flask {{ data.framework.flask }}
+      </span>
+      {% endif %}
+      {% if data.framework.werkzeug %}
+      <span class="badge bg-light text-muted border fw-semibold px-3 py-2">
+        Werkzeug {{ data.framework.werkzeug }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-uppercase text-muted small fw-semibold">Аптайм</span>
+            <i class="bi bi-clock-history text-primary fs-4"></i>
+          </div>
+          <div class="fs-5 fw-semibold">{{ data.uptime }}</div>
+          {% if data.uptime_details.started_at %}
+          <div class="text-muted small">Старт: {{ data.uptime_details.started_at }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      {% set load_badge = 'bg-success-subtle text-success' %}
+      {% if data.load.status == 'warning' %}
+        {% set load_badge = 'bg-warning-subtle text-dark' %}
+      {% elif data.load.status == 'danger' %}
+        {% set load_badge = 'bg-danger-subtle text-white' %}
+      {% endif %}
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-uppercase text-muted small fw-semibold">Нагрузка CPU</span>
+            <i class="bi bi-activity text-primary fs-4"></i>
+          </div>
+          <div class="fs-5 fw-semibold">{{ data.load['1m'] }}</div>
+          <div class="text-muted small mb-2">
+            На {{ data.load.cpu_count }} ядер · {{ data.load.per_cpu['1m'] }} на ядро
+          </div>
+          {% if data.load.status == 'danger' %}
+          <span class="badge {{ load_badge }}">Критическая нагрузка</span>
+          {% elif data.load.status == 'warning' %}
+          <span class="badge {{ load_badge }}">Повышенная нагрузка</span>
+          {% else %}
+          <span class="badge {{ load_badge }}">Норма</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      {% set mem_badge = 'bg-success-subtle text-success' %}
+      {% set mem_bar = 'bg-success' %}
+      {% if data.memory.status == 'warning' %}
+        {% set mem_badge = 'bg-warning-subtle text-dark' %}
+        {% set mem_bar = 'bg-warning text-dark fw-semibold' %}
+      {% elif data.memory.status == 'danger' %}
+        {% set mem_badge = 'bg-danger-subtle text-white' %}
+        {% set mem_bar = 'bg-danger' %}
+      {% elif data.memory.status == 'muted' %}
+        {% set mem_badge = 'bg-secondary-subtle text-muted' %}
+        {% set mem_bar = 'bg-secondary' %}
+      {% endif %}
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-uppercase text-muted small fw-semibold">Память</span>
+            <i class="bi bi-memory text-primary fs-4"></i>
+          </div>
+          <div class="fs-5 fw-semibold mb-1">
+            {{ data.memory.used }} / {{ data.memory.total }}
+          </div>
+          <div class="progress mb-2" style="height: 6px;">
+            <div
+              class="progress-bar {{ mem_bar }}"
+              role="progressbar"
+              style="width: {{ data.memory.used_percent }}%;"
+              aria-valuenow="{{ data.memory.used_percent }}"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></div>
+          </div>
+          <div class="d-flex justify-content-between text-muted small">
+            <span>Свободно {{ data.memory.available }}</span>
+            <span>{{ data.memory.used_percent }}%</span>
+          </div>
+          <span class="badge mt-2 {{ mem_badge }}">Использование памяти</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      {% set disk_badge = 'bg-success-subtle text-success' %}
+      {% set disk_bar = 'bg-success' %}
+      {% if data.disk.status == 'warning' %}
+        {% set disk_badge = 'bg-warning-subtle text-dark' %}
+        {% set disk_bar = 'bg-warning text-dark fw-semibold' %}
+      {% elif data.disk.status == 'danger' %}
+        {% set disk_badge = 'bg-danger-subtle text-white' %}
+        {% set disk_bar = 'bg-danger' %}
+      {% elif data.disk.status == 'muted' %}
+        {% set disk_badge = 'bg-secondary-subtle text-muted' %}
+        {% set disk_bar = 'bg-secondary' %}
+      {% endif %}
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-uppercase text-muted small fw-semibold">Диск {{ data.disk.path }}</span>
+            <i class="bi bi-hdd-network text-primary fs-4"></i>
+          </div>
+          <div class="fs-5 fw-semibold mb-1">
+            {{ data.disk.used }} / {{ data.disk.root_total }}
+          </div>
+          <div class="progress mb-2" style="height: 6px;">
+            <div
+              class="progress-bar {{ disk_bar }}"
+              role="progressbar"
+              style="width: {{ data.disk.used_percent }}%;"
+              aria-valuenow="{{ data.disk.used_percent }}"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></div>
+          </div>
+          <div class="d-flex justify-content-between text-muted small">
+            <span>Свободно {{ data.disk.root_free }}</span>
+            <span>{{ data.disk.used_percent }}%</span>
+          </div>
+          <span class="badge mt-2 {{ disk_badge }}">Заполнение диска</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-transparent fw-semibold">
+          Сервер и платформа
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-muted">ОС</dt>
+            <dd class="col-7">{{ data.os_pretty }}</dd>
+            <dt class="col-5 text-muted">Хост</dt>
+            <dd class="col-7">{{ data.host.hostname or '—' }}</dd>
+            <dt class="col-5 text-muted">Архитектура</dt>
+            <dd class="col-7">{{ data.host.machine }} · {{ data.host.architecture }}</dd>
+            <dt class="col-5 text-muted">Ядро</dt>
+            <dd class="col-7">{{ data.host.kernel }}</dd>
+            <dt class="col-5 text-muted">Python</dt>
+            <dd class="col-7">{{ data.python }} ({{ data.python_impl }})</dd>
+            {% if data.framework.flask %}
+            <dt class="col-5 text-muted">Flask</dt>
+            <dd class="col-7">{{ data.framework.flask }}</dd>
+            {% endif %}
+            {% if data.framework.werkzeug %}
+            <dt class="col-5 text-muted">Werkzeug</dt>
+            <dd class="col-7">{{ data.framework.werkzeug }}</dd>
+            {% endif %}
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+          Ресурсы
+          <span class="text-muted small">Load: {{ data.load['1m'] }} / {{ data.load['5m'] }} / {{ data.load['15m'] }}</span>
+        </div>
+        <div class="card-body">
+          {% set mem_bar_detail = 'bg-success' %}
+          {% if data.memory.status == 'warning' %}
+            {% set mem_bar_detail = 'bg-warning text-dark fw-semibold' %}
+          {% elif data.memory.status == 'danger' %}
+            {% set mem_bar_detail = 'bg-danger' %}
+          {% elif data.memory.status == 'muted' %}
+            {% set mem_bar_detail = 'bg-secondary' %}
+          {% endif %}
+          <div class="mb-4">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="fw-semibold">Оперативная память</span>
+              <span class="text-muted small">{{ data.memory.used_percent }}%</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+              <div class="progress-bar {{ mem_bar_detail }}" role="progressbar" style="width: {{ data.memory.used_percent }}%;"></div>
+            </div>
+            <div class="d-flex justify-content-between text-muted small mt-1">
+              <span>Свободно {{ data.memory.available }}</span>
+              <span>Всего {{ data.memory.total }}</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="fw-semibold">Swap</span>
+              {% if data.swap.total_bytes %}
+              <span class="text-muted small">{{ data.swap.used_percent }}%</span>
+              {% endif %}
+            </div>
+            {% if data.swap.total_bytes %}
+            {% set swap_bar = 'bg-success' %}
+            {% if data.swap.status == 'warning' %}
+              {% set swap_bar = 'bg-warning text-dark fw-semibold' %}
+            {% elif data.swap.status == 'danger' %}
+              {% set swap_bar = 'bg-danger' %}
+            {% elif data.swap.status == 'muted' %}
+              {% set swap_bar = 'bg-secondary' %}
+            {% endif %}
+            <div class="progress" style="height: 10px;">
+              <div class="progress-bar {{ swap_bar }}" role="progressbar" style="width: {{ data.swap.used_percent }}%;"></div>
+            </div>
+            <div class="d-flex justify-content-between text-muted small mt-1">
+              <span>Свободно {{ data.swap.free }}</span>
+              <span>Всего {{ data.swap.total }}</span>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">Swap не выделен.</p>
+            {% endif %}
+          </div>
+          <div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">CPU</span>
+              <span class="text-muted small">{{ data.load.cpu_count }} ядер</span>
+            </div>
+            <div class="text-muted small">
+              На ядро: {{ data.load.per_cpu['1m'] }} / {{ data.load.per_cpu['5m'] }} / {{ data.load.per_cpu['15m'] }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+          База данных
+          <span class="text-muted small">Всего записей: {{ data.db.rows_total }}</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 mb-3 small">
+            <div class="col-sm-4">
+              <div class="text-muted">Движок</div>
+              <div class="fw-semibold">{{ data.db.backend }}</div>
+            </div>
+            {% if data.db.dsn %}
+            <div class="col-sm-8">
+              <div class="text-muted">Подключение</div>
+              <code class="d-block text-break">{{ data.db.dsn }}</code>
+            </div>
+            {% endif %}
+          </div>
+          {% if data.db.top_tables %}
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Таблица</th>
+                  <th scope="col" class="text-end">Записей</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t, c in data.db.top_tables %}
+                <tr>
+                  <td><code>{{ t }}</code></td>
+                  <td class="text-end">{{ c }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+          <details class="small">
+            <summary class="fw-semibold">Все таблицы</summary>
+            <ul class="list-unstyled mt-2 mb-0">
+              {% for t, c in data.db.tables_sorted %}
+              <li class="d-flex justify-content-between border-bottom py-1">
+                <span><code>{{ t }}</code></span>
+                <span>{{ c }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-transparent fw-semibold">Сторонние сервисы</div>
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div>
+              <div class="fw-semibold">Redis</div>
+              <div class="text-muted small">Для фоновых задач и кеширования</div>
+            </div>
+            {% if data.redis_available %}
+            <span class="badge bg-success-subtle text-success">доступен</span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-white">недоступен</span>
+            {% endif %}
+          </div>
+          <hr />
+          <p class="text-muted small mb-0">
+            Если сервис недоступен — проверьте настройки и логирование на сервере перед деплоем.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-muted small mt-4 mb-0">
+    Обновите страницу, чтобы получить актуальные показатели. Данные собираются непосредственно с сервера CRM.
+  </p>
+</div>
+{% endblock %}

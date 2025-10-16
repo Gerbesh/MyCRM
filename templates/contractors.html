@@ -1,0 +1,705 @@
+{% extends "base.html" %} {% block content %}
+<div
+  class="container mt-4"
+  data-is-admin="{{ 'true' if current_user.role == 'admin' else 'false' }}"
+  data-view-request-url-template="{{ url_for('request_crud.view_request', id=0) }}"
+  data-add-contractor-url="{{ url_for('contractor.add_contractor') }}"
+  data-edit-contractor-url-template="{{ url_for('contractor.edit_contractor', id=0) }}"
+  data-delete-contractor-url-template="{{ url_for('contractor.delete_contractor', id=0) }}"
+>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Подрядчики</h1>
+    <button type="button" class="btn btn-success" id="add-contractor-btn">
+      Добавить подрядчика
+    </button>
+  </div>
+
+  <!-- Поиск -->
+  <div class="card shadow-hover mb-4 slide-down">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <form
+            method="GET"
+            action="{{ url_for('contractor.contractors') }}"
+            class="d-flex gap-2"
+          >
+            <div class="position-relative flex-grow-1">
+              <input
+                type="text"
+                name="search"
+                class="form-control form-control-lg"
+                placeholder="Поиск по названию, ИНН, контакту..."
+                value="{{ search or '' }}"
+              />
+              <i
+                class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"
+              ></i>
+            </div>
+            <input type="hidden" name="per_page" value="{{ per_page }}" />
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-search me-2"></i>Поиск
+            </button>
+            {% if search %}
+            <a
+              href="{{ url_for('contractor.contractors') }}"
+              class="btn btn-outline-secondary btn-lg"
+            >
+              <i class="bi bi-x-circle me-2"></i>Очистить
+            </a>
+            {% endif %}
+          </form>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <div class="d-flex justify-content-md-end align-items-center gap-3">
+            <div class="text-muted">
+              <i class="bi bi-info-circle me-1"></i>
+              <small
+                >Найдено подрядчиков:
+                <strong id="contractors-count"
+                  >{{ pagination.total }}</strong
+                ></small
+              >
+            </div>
+            <form
+              method="get"
+              action="{{ url_for('contractor.contractors') }}"
+              class="d-flex align-items-center"
+            >
+              <input type="hidden" name="search" value="{{ search }}" />
+              <label for="perPage" class="me-2 mb-0">На странице:</label>
+              <select
+                id="perPage"
+                name="per_page"
+                class="form-select form-select-sm w-auto"
+                onchange="this.form.submit()"
+              >
+                {% set selected_per_page = per_page|int %} {% for option in [10,
+                25, 50, 100] %} {% if selected_per_page == option %}
+                <option value="{{ option }}" selected>{{ option }}</option>
+                {% else %}
+                <option value="{{ option }}">{{ option }}</option>
+                {% endif %} {% endfor %}
+              </select>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Переключалка видов -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="view-toggle">
+      <button class="toggle-btn active" data-view="table">
+        <i class="bi bi-table"></i>
+      </button>
+      <button class="toggle-btn" data-view="cards">
+        <i class="bi bi-grid-3x3-gap"></i>
+      </button>
+    </div>
+    <div class="text-muted">
+      <small
+        ><i class="bi bi-eye me-1"></i>Вид:
+        <span id="current-view">Таблица</span></small
+      >
+    </div>
+  </div>
+
+  <!-- Таблица -->
+  <div id="contractors-table-skeleton" class="mb-3">
+    {% for _ in range(3) %}
+    <div class="skeleton skeleton-text long"></div>
+    {% endfor %}
+  </div>
+  <div id="contractors-table" class="table-view d-none">
+    {% if contractors %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>ИНН</th>
+            <th>Контакт</th>
+            <th>Телефон</th>
+            <th>Email</th>
+            <th>Заявки</th>
+            {% if current_user.role == 'admin' %}
+            <th>Действия</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for contractor in contractors %}
+          <tr>
+            <td>{{ contractor.name }}</td>
+            <td>{{ contractor.inn or '—' }}</td>
+            <td>{{ contractor.contact_person or '—' }}</td>
+            <td>{{ contractor.phone or '—' }}</td>
+            <td>{{ contractor.email or '—' }}</td>
+            <td>
+              <button
+                class="btn btn-sm btn-info"
+                data-bs-toggle="modal"
+                data-bs-target="#requestsModal"
+                data-contractor-id="{{ contractor.id }}"
+                data-contractor-name="{{ contractor.name }}"
+              >
+                Заявок: {{ contractor.request_count }}
+              </button>
+            </td>
+            {% if current_user.role == 'admin' %}
+            <td>
+              <a
+                href="{{ url_for('contractor.edit_contractor', id=contractor.id) }}"
+                class="btn btn-sm btn-primary"
+                >Редактировать</a
+              >
+              <form
+                method="POST"
+                action="{{ url_for('contractor.delete_contractor', id=contractor.id) }}"
+                style="display: inline"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-danger"
+                  data-confirm="Вы уверены, что хотите удалить подрядчика? Это действие нельзя отменить."
+                >
+                  Удалить
+                </button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">Подрядчики не найдены.</p>
+    {% endif %}
+
+    <!-- Пагинация -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Пагинация подрядчиков">
+      <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('contractor.contractors', page=pagination.prev_num, search=search, per_page=per_page) }}"
+            aria-label="Предыдущая"
+          >
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Предыдущая">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% endif %} {% for page_num in pagination.iter_pages() %} {% if page_num
+        %} {% if page_num != pagination.page %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('contractor.contractors', page=page_num, search=search, per_page=per_page) }}"
+            >{{ page_num }}</a
+          >
+        </li>
+        {% else %}
+        <li class="page-item active">
+          <a class="page-link" href="#">{{ page_num }}</a>
+        </li>
+        {% endif %} {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#">…</a>
+        </li>
+        {% endif %} {% endfor %} {% if pagination.has_next %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('contractor.contractors', page=pagination.next_num, search=search, per_page=per_page) }}"
+            aria-label="Следующая"
+          >
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Следующая">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+
+  <!-- Карточки -->
+  <div
+    id="contractors-cards-skeleton"
+    class="row row-cols-1 row-cols-md-3 g-3 mb-3 d-none"
+  >
+    {% for _ in range(3) %}
+    <div class="col">
+      <div class="card p-3">
+        <div class="skeleton skeleton-text long"></div>
+        <div class="skeleton skeleton-text short"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div id="contractors-cards" class="d-none">
+    {% for contractor in contractors %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">{{ contractor.name }}</h5>
+        {% if contractor.inn %}
+        <p><strong>ИНН:</strong> {{ contractor.inn }}</p>
+        {% endif %} {% if contractor.contact_person %}
+        <p><strong>Контакт:</strong> {{ contractor.contact_person }}</p>
+        {% endif %} {% if contractor.phone %}
+        <p><strong>Телефон:</strong> {{ contractor.phone }}</p>
+        {% endif %} {% if contractor.email %}
+        <p><strong>Email:</strong> {{ contractor.email }}</p>
+        {% endif %}
+        <p>
+          <strong>Заявки:</strong>
+          <button
+            class="btn btn-sm btn-info"
+            data-bs-toggle="modal"
+            data-bs-target="#requestsModal"
+            data-contractor-id="{{ contractor.id }}"
+            data-contractor-name="{{ contractor.name }}"
+          >
+            {{ contractor.request_count }}
+          </button>
+        </p>
+        {% if current_user.role == 'admin' %}
+        <div class="d-flex gap-2">
+          <a
+            href="{{ url_for('contractor.edit_contractor', id=contractor.id) }}"
+            class="btn btn-sm btn-primary"
+            >Редактировать</a
+          >
+          <form
+            method="POST"
+            action="{{ url_for('contractor.delete_contractor', id=contractor.id) }}"
+            style="display: inline"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button
+              type="submit"
+              class="btn btn-sm btn-danger"
+              data-confirm="Удалить?"
+            >
+              Удалить
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Пагинация для карточек -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Пагинация подрядчиков">
+      <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('contractor.contractors', page=pagination.prev_num, search=search, per_page=per_page) }}"
+            aria-label="Предыдущая"
+          >
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Предыдущая">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {% endif %} {% for page_num in pagination.iter_pages() %} {% if page_num
+        %} {% if page_num != pagination.page %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('contractor.contractors', page=page_num, search=search, per_page=per_page) }}"
+            >{{ page_num }}</a
+          >
+        </li>
+        {% else %}
+        <li class="page-item active">
+          <a class="page-link" href="#">{{ page_num }}</a>
+        </li>
+        {% endif %} {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#">…</a>
+        </li>
+        {% endif %} {% endfor %} {% if pagination.has_next %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('contractor.contractors', page=pagination.next_num, search=search, per_page=per_page) }}"
+            aria-label="Следующая"
+          >
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Следующая">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Модальное окно добавления подрядчика -->
+<div
+  class="modal fade"
+  id="addContractorModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="add-contractor-form">
+        <div class="modal-header">
+          <h5 class="modal-title">Новый подрядчик</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Закрыть"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="contractor-name" class="form-label">Название</label>
+            <input
+              type="text"
+              class="form-control"
+              id="contractor-name"
+              required
+            />
+            <div class="invalid-feedback" id="contractor-name-error"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Отмена
+          </button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для заявок -->
+<div class="modal fade" id="requestsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Заявки</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <ul id="requests-list" class="list-group">
+          <li class="list-group-item text-center text-muted">Загрузка...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script type="application/json" data-disabled="true">
+  const VIEW_REQUEST_BASE = '{{ url_for("request_crud.view_request", id=0)[:-1] }}';
+  document.addEventListener('DOMContentLoaded', () => {
+      const tableView = document.getElementById('contractors-table');
+      const cardsView = document.getElementById('contractors-cards');
+      const buttons = document.querySelectorAll('[data-view]');
+
+      if (!tableView || !cardsView || buttons.length === 0) return;
+
+      buttons.forEach(btn => {
+          btn.addEventListener('click', () => {
+              const currentViewSpan = document.getElementById('current-view');
+              if (btn.getAttribute('data-view') === 'cards') {
+                  tableView.classList.add('d-none');
+                  cardsView.classList.remove('d-none');
+                  if (currentViewSpan) currentViewSpan.textContent = 'Карточки';
+              } else {
+                  cardsView.classList.add('d-none');
+                  tableView.classList.remove('d-none');
+                  if (currentViewSpan) currentViewSpan.textContent = 'Таблица';
+              }
+              buttons.forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+          });
+      });
+
+      // Модалка — использование новой системы
+      const modal = document.getElementById('requestsModal');
+      if (!modal) return;
+
+      // спользуем новую систему модальных окон
+
+      modal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget;
+          const contractorId = button.getAttribute('data-contractor-id');
+          const name = button.getAttribute('data-contractor-name');
+          const list = document.getElementById('requests-list');
+          list.innerHTML = '<li class="list-group-item text-center text-muted">Загрузка...</li>';
+
+          modal.querySelector('.modal-title').textContent = `Заявки: ${name}`;
+
+          fetch(`/api/v1/requests/by_contractor/${contractorId}`)
+              .then(response => {
+                  console.log('Response status:', response.status);
+                  if (!response.ok) {
+                      if (response.status === 404) {
+                          throw new Error('API endpoint not found');
+                      } else if (response.status === 500) {
+                          throw new Error('Server error');
+                      } else {
+                          throw new Error(`HTTP error! status: ${response.status}`);
+                      }
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  list.innerHTML = '';
+                  data = Array.isArray(data) ? data : (data && Array.isArray(data.data) ? data.data : []);
+                  if (!data || data.length === 0) {
+                      list.innerHTML = '<li class="list-group-item text-center text-muted">Нет заявок</li>';
+                      return;
+                  }
+                  data.forEach(req => {
+                      const code = String(req.status || '').toUpperCase();
+                      const statusClass = code === '{{ RequestStatus.DONE.value }}' ? 'bg-success' : 'bg-warning';
+                      const date = new Date(req.created_at).toLocaleDateString('ru-RU');
+                      const contractorsHtml = req.contractors.map(c =>
+                          `<span class="badge bg-primary me-1">${c.name}</span>`
+                      ).join('');
+
+                      const manufacturersHtml = req.manufacturers.map(m =>
+                          `<span class="badge bg-info me-1">${m}</span>`
+                      ).join('');
+
+                      const item = document.createElement('li');
+                      item.className = 'list-group-item';
+                      item.innerHTML = `
+                          <div class="d-flex justify-content-between mb-2">
+                              <strong>Заявка #${req.id}</strong>
+                              <span class="badge ${statusClass}">${window.STATUS_LABELS_RU?.[(req.status || '').toUpperCase()] || req.status}</span>
+                          </div>
+                          <div class="mb-1"><small><strong>Подрядчики:</strong></small><br>${contractorsHtml}</div>
+                          <div class="mb-1"><small><strong>Производители:</strong></small><br>${manufacturersHtml}</div>
+                          <div class="text-muted small">от ${date}</div>
+                          <div class="text-end mt-2">
+                              <a href="${VIEW_REQUEST_BASE}${req.id}" class="btn btn-sm btn-outline-primary">Открыть</a>
+                          </div>
+                      `;
+                      list.appendChild(item);
+                  });
+              })
+              .catch(err => {
+                  console.error('Error loading requests:', err);
+                  list.innerHTML = `<li class="list-group-item text-center text-danger">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      Ошибка загрузки заявок: ${err.message}
+                      <br><small class="text-muted">Попробуйте обновить страницу</small>
+                  </li>`;
+
+                  // Добавляем кнопку повторной попытки
+                  const retryBtn = document.createElement('button');
+                  retryBtn.className = 'btn btn-sm btn-outline-primary mt-2';
+                  retryBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Повторить';
+                  retryBtn.onclick = () => {
+                      window.ModalSystem.hide('requestsModal');
+                      setTimeout(() => {
+                          const triggerBtn = document.querySelector(`[data-contractor-id="${contractorId}"]`);
+                          if (triggerBtn) triggerBtn.click();
+                      }, 100);
+                  };
+                  list.querySelector('li').appendChild(retryBtn);
+              });
+      });
+
+      // нициализируем модальное окно через новую систему
+      window.ModalSystem.init(modal);
+
+      // Добавляем обработчики для правильного закрытия модального окна
+      modal.addEventListener('hidden.bs.modal', function () {
+          // Очищаем содержимое при закрытии
+          const list = document.getElementById('requests-list');
+          if (list) {
+              list.innerHTML = '<li class="list-group-item text-center text-muted">Загрузка...</li>';
+          }
+
+          // Убеждаемся, что backdrop удален
+          const backdrops = document.querySelectorAll('.modal-backdrop');
+          backdrops.forEach(backdrop => backdrop.remove());
+
+          // Восстанавливаем скролл body
+          document.body.classList.remove('modal-open');
+          document.body.style.overflow = '';
+          document.body.style.paddingRight = '';
+      });
+
+      // Обработчик для кнопки закрытия
+      const closeBtn = modal.querySelector('[data-bs-dismiss="modal"]');
+      if (closeBtn) {
+          closeBtn.addEventListener('click', function() {
+              window.ModalSystem.hide('requestsModal');
+              setTimeout(() => {
+                  if (window.cleanupModalBackdrop) {
+                      window.cleanupModalBackdrop();
+                  }
+              }, 200);
+          });
+      }
+
+      // Закрытие по клику на backdrop
+      modal.addEventListener('click', function(event) {
+          if (event.target === modal) {
+              window.ModalSystem.hide('requestsModal');
+          }
+      });
+
+      // Настройка модального окна добавления подрядчика
+      const addContractorBtn = document.getElementById('add-contractor-btn');
+      const addContractorModalEl = document.getElementById('addContractorModal');
+      const addContractorForm = document.getElementById('add-contractor-form');
+      const contractorNameInput = document.getElementById('contractor-name');
+      const contractorNameError = document.getElementById('contractor-name-error');
+      const isAdmin = {{ 'true' if current_user.role == 'admin' else 'false' }};
+
+      if (addContractorBtn && addContractorModalEl && addContractorForm) {
+          const addContractorModal = new bootstrap.Modal(addContractorModalEl);
+
+          addContractorBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              addContractorForm.reset();
+              contractorNameInput.classList.remove('is-invalid');
+              contractorNameError.textContent = '';
+              addContractorModal.show();
+          });
+
+          addContractorForm.addEventListener('submit', function (e) {
+              e.preventDefault();
+              const name = contractorNameInput.value.trim();
+              if (!name) {
+                  contractorNameInput.classList.add('is-invalid');
+                  contractorNameError.textContent = 'Название обязательно';
+                  return;
+              }
+
+              const formData = new FormData();
+              formData.append('name', name);
+              formData.append('csrf_token', '{{ csrf_token() }}');
+
+              fetch('{{ url_for("contractor.add_contractor") }}', {
+                  method: 'POST',
+                  body: formData
+              })
+                  .then(response => response.json())
+                  .then(data => {
+                      if (data.error) {
+                          contractorNameInput.classList.add('is-invalid');
+                          contractorNameError.textContent = data.error;
+                      } else {
+                          addContractorModal.hide();
+                          appendContractorRow(data);
+                      }
+                  })
+                  .catch(error => {
+                      console.error('Ошибка:', error);
+                      contractorNameInput.classList.add('is-invalid');
+                      contractorNameError.textContent = 'Сервер недоступен';
+                  });
+          });
+      }
+
+      // Добавление нового подрядчика в таблицу и карточки без перезагрузки
+      function appendContractorRow(data) {
+          const countEl = document.getElementById('contractors-count');
+          if (countEl) {
+              countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+          }
+
+          const tableBody = document.querySelector('#contractors-table tbody');
+          if (tableBody) {
+              const row = document.createElement('tr');
+              let adminActions = '';
+              if (isAdmin) {
+                  const editUrl = '{{ url_for("contractor.edit_contractor", id=0) }}'.replace('0', data.id);
+                  const deleteUrl = '{{ url_for("contractor.delete_contractor", id=0) }}'.replace('0', data.id);
+                  adminActions = `<a href="${editUrl}" class="btn btn-sm btn-primary">Редактировать</a>
+                      <form method="POST" action="${deleteUrl}" style="display:inline;">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                          <button type="submit" class="btn btn-sm btn-danger" data-confirm="Вы уверены, что хотите удалить подрядчика? Это действие нельзя отменить.">Удалить</button>
+                      </form>`;
+              }
+              row.innerHTML = `<td>${data.name}</td><td>—</td><td>—</td><td>—</td><td>—</td>
+                  <td><button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#requestsModal" data-contractor-id="${data.id}" data-contractor-name="${data.name}">Заявок: 0</button></td>` + (isAdmin ? `<td>${adminActions}</td>` : '');
+              tableBody.prepend(row);
+          }
+
+          const cards = document.getElementById('contractors-cards');
+          if (cards) {
+              const card = document.createElement('div');
+              card.className = 'card mb-3';
+              let adminBlock = '';
+              if (isAdmin) {
+                  const editUrl = '{{ url_for("contractor.edit_contractor", id=0) }}'.replace('0', data.id);
+                  const deleteUrl = '{{ url_for("contractor.delete_contractor", id=0) }}'.replace('0', data.id);
+                  adminBlock = `<div class="d-flex gap-2">
+                          <a href="${editUrl}" class="btn btn-sm btn-primary">Редактировать</a>
+                          <form method="POST" action="${deleteUrl}" style="display:inline;">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                              <button type="submit" class="btn btn-sm btn-danger" data-confirm="Удалить?">Удалить</button>
+                          </form>
+                      </div>`;
+              }
+              card.innerHTML = `<div class="card-body">
+                      <h5 class="card-title">${data.name}</h5>
+                      <p><strong>Заявки:</strong> <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#requestsModal" data-contractor-id="${data.id}" data-contractor-name="${data.name}">0</button></p>
+                      ${isAdmin ? adminBlock : ''}
+                  </div>`;
+              cards.prepend(card);
+          }
+      }
+  });
+</script>
+<script
+  src="{{ url_for('static', filename='js/contractors.js') }}"
+  defer
+></script>
+{% endblock %}

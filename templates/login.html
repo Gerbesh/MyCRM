@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <title>Вход | Крепления</title>
+
+    <!-- Стили -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='design-tokens.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='dark-theme.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='modern-style.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='login-animation.css') }}"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        const savedTheme = localStorage.getItem('theme');
+        const theme = savedTheme || 'light';
+        if (theme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.id = 'dark-theme';
+          link.href = "{{ url_for('static', filename='dark-theme.css') }}";
+          document.head.appendChild(link);
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+  </head>
+  <body
+    data-need-recaptcha="{{ 'true' if show_captcha else 'false' }}"
+    data-recaptcha-site-key="{{ recaptcha_site_key or '' }}"
+  >
+    <!-- Полноэкранный логин -->
+    <div class="login-screen" id="loginScreen">
+      <!-- Анимированные элементы на фоне -->
+      <div class="floating-element"></div>
+      <div class="floating-element"></div>
+      <div class="floating-element"></div>
+
+      <!-- Контейнер формы -->
+      <div class="login-form-container" id="loginFormContainer">
+        <div class="login-form">
+          <h1 class="login-title">Крепления</h1>
+          <p class="login-subtitle">Добро пожаловать в систему</p>
+
+          <!-- Ошибки авторизации -->
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div class="login-error">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ message }}
+          </div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <!-- Форма авторизации -->
+          <form method="POST" id="loginForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="mb-3">
+              <input
+                type="text"
+                class="form-control"
+                id="username"
+                name="username"
+                placeholder="имя пользователя"
+                required
+                autocomplete="username"
+              />
+            </div>
+
+            <div class="mb-3">
+              <input
+                type="password"
+                class="form-control"
+                id="password"
+                name="password"
+                placeholder="Пароль"
+                required
+                autocomplete="current-password"
+              />
+            </div>
+            {% if show_captcha %}
+            <div class="mb-3">
+              <!-- reCAPTCHA v3: токен будет генерироваться на клиенте и отправляться в hidden-поле -->
+              <input
+                type="hidden"
+                id="g-recaptcha-response"
+                name="g-recaptcha-response"
+              />
+              <div
+                class="alert alert-warning d-flex align-items-center"
+                role="alert"
+              >
+                <i class="bi bi-shield-check me-2"></i>
+                <div>
+                  Включена дополнительная проверка (reCAPTCHA). Нажмите «Войти»,
+                  чтобы подтвердить, что вы не робот.
+                </div>
+              </div>
+              <div class="form-text mt-1" style="font-size: 12px">
+                Этот сайт защищён reCAPTCHA, применяются
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener"
+                  >Политика конфиденциальности</a
+                >
+                и
+                <a
+                  href="https://policies.google.com/terms"
+                  target="_blank"
+                  rel="noopener"
+                  >Условия использования</a
+                >
+                Google.
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="d-flex flex-column gap-2">
+              <button type="submit" class="login-btn" id="loginBtn">
+                <span class="btn-text">Войти в систему</span>
+              </button>
+            </div>
+          </form>
+          <form
+            method="POST"
+            action="{{ url_for('auth.demo_login') }}"
+            class="mt-3"
+            id="demoLoginForm"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="login-btn login-btn--ghost" id="demoLoginBtn">
+              <span class="btn-text">Демо-авторизация</span>
+            </button>
+            <p class="demo-hint text-center mt-2">
+              Просмотр тестовой базы без возможности изменять данные.
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script src="{{ url_for('static', filename='alert-modal.js') }}"></script>
+    {% if show_captcha and recaptcha_site_key %}
+    <script
+      src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"
+      async
+      defer
+    ></script>
+    {% endif %}
+    <script
+      src="{{ url_for('static', filename='js/login.js') }}"
+      defer
+    ></script>
+  </body>
+</html>

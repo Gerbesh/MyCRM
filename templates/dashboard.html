@@ -1,0 +1,494 @@
+{% extends "base.html" %} {% block title %}Dashboard | Крепления{% endblock %}
+{% block content %}
+<!-- prettier-ignore -->
+<div class="dashboard-container">
+  <!-- Header секция -->
+  <div class="dashboard-header slide-down">
+    <div class="row align-items-center mb-4">
+      <div class="col-md-6">
+        <h1 class="gradient-text mb-2">
+          <i class="bi bi-speedometer2 me-2"></i>
+          Панель управления
+        </h1>
+        <p class="text-muted">
+          Добро пожаловать, {{ current_user.username }}! Управляйте заявками
+          эффективно.
+        </p>
+      </div>
+      <div class="col-md-6 text-md-end">
+        {% if current_user.role == 'demo' %}
+        <div class="d-inline-flex flex-column align-items-md-end align-items-start gap-2">
+          <a
+            href="{{ url_for('request_crud.create_request') }}"
+            class="btn btn-outline-primary btn-lg shadow-hover"
+          >
+            <i class="bi bi-plus-circle me-2"></i>
+            Открыть мастер (демо)
+          </a>
+          <small class="text-muted text-md-end">
+            Отправка заявок недоступна в демо-режиме
+          </small>
+        </div>
+        {% else %}
+        <a
+          href="{{ url_for('request_crud.create_request') }}"
+          class="btn btn-primary btn-lg shadow-hover"
+        >
+          <i class="bi bi-plus-circle me-2"></i>
+          Создать заявку
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Статистические карточки -->
+  <div class="row g-4 mb-5">
+    <div class="col-md-3 col-sm-6">
+      <div class="stats-card slide-up" style="animation-delay: 0.1s">
+        <div class="stats-icon bg-primary">
+          <i class="bi bi-clipboard-data"></i>
+        </div>
+        <div class="stats-content">
+          <h3 class="stats-number">
+            {{ total_requests if total_requests is defined else 0 }}
+          </h3>
+          <p class="stats-label">Всего заявок</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="stats-card slide-up" style="animation-delay: 0.2s">
+        <div class="stats-icon bg-success">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="stats-content">
+          <h3 class="stats-number">
+            {{ processed_requests if processed_requests is defined else 0 }}
+          </h3>
+          <p class="stats-label">Обработано</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="stats-card slide-up" style="animation-delay: 0.3s">
+        <div class="stats-icon bg-warning">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="stats-content">
+          <h3 class="stats-number">
+            {{ unprocessed_requests if unprocessed_requests is defined else 0 }}
+          </h3>
+          <p class="stats-label">В ожидании</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="stats-card slide-up" style="animation-delay: 0.4s">
+        <div class="stats-icon bg-info">
+          <i class="bi bi-calendar-day"></i>
+        </div>
+        <div class="stats-content">
+          <h3 class="stats-number">
+            {{ today_count if today_count is defined else 0 }}
+          </h3>
+          <p class="stats-label">Сегодня</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Фильтры и управление -->
+  <div class="card shadow-hover slide-left mb-4">
+    <div class="card-body">
+      <div class="row align-items-center mb-3">
+        <div class="col-md-8">
+          <div class="d-flex align-items-center">
+            <div class="filter-tabs me-3">
+              <a
+                href="{{ url_for('main.dashboard', status='all', search=request.args.get('search', ''), my_requests=request.args.get('my_requests', ''), per_page=per_page) }}"
+                class="filter-tab {{ 'active' if current_filter == 'all' else '' }}"
+              >
+                <i class="bi bi-list-ul me-1"></i>Все заявки
+              </a>
+            </div>
+            <div>
+              <select
+                class="form-select"
+                onchange="location.href='{{ url_for('main.dashboard') }}?status=' + this.value + '&search={{ request.args.get('search', '') }}&my_requests={{ request.args.get('my_requests', '') }}&per_page={{ per_page }}'"
+              >
+                <option
+                  value="all"
+                  {% if current_filter == 'all' %}selected{% endif %}
+                >
+                  Все заявки
+                </option>
+                {% for s in RequestStatus.filter_list() %}
+                <option
+                  value="{{ s }}"
+                  {% if current_filter == s %}selected{% endif %}
+                >
+                  {{ status_label(s) }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <div class="view-toggle">
+            <button class="toggle-btn active" data-view="cards">
+              <i class="bi bi-grid-3x3-gap"></i>
+            </button>
+            <button class="toggle-btn" data-view="table">
+              <i class="bi bi-table"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Поиск и дополнительные фильтры -->
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <div class="search-box">
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="bi bi-search"></i>
+              </span>
+              <input
+                type="text"
+                class="form-control"
+                id="searchInput"
+                placeholder="Поиск по объектам, подрядчикам, производителям..."
+                value="{{ request.args.get('search', '') }}"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                id="clearSearch"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div
+            class="additional-filters d-flex align-items-center justify-content-md-end"
+          >
+            <div class="form-check me-3">
+              {% if request.args.get('my_requests') == 'true' %}
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="myRequestsOnly"
+                checked
+              />
+              {% else %}
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="myRequestsOnly"
+              />
+              {% endif %}
+              <label class="form-check-label" for="myRequestsOnly">
+                <i class="bi bi-person-check me-1"></i>
+                Только мои заявки
+              </label>
+            </div>
+            <div class="d-flex align-items-center me-3">
+              <label for="perPageSelect" class="me-2 mb-0">На странице:</label>
+              <select
+                id="perPageSelect"
+                class="form-select form-select-sm w-auto"
+              >
+                <option
+                  value="10"
+                  {% if per_page == 10 %}selected{% endif %}
+                >
+                  10
+                </option>
+                <option
+                  value="25"
+                  {% if per_page == 25 %}selected{% endif %}
+                >
+                  25
+                </option>
+                <option
+                  value="50"
+                  {% if per_page == 50 %}selected{% endif %}
+                >
+                  50
+                </option>
+                <option
+                  value="100"
+                  {% if per_page == 100 %}selected{% endif %}
+                >
+                  100
+                </option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-sm" id="applyFilters">
+              <i class="bi bi-funnel me-1"></i>
+              Применить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Карточки заявок (по умолчанию) -->
+  <div id="requests-cards" class="requests-grid">
+    {% if table_rows %} {% for row in table_rows %}
+    <div
+      class="request-card slide-up"
+      style="animation-delay: {{ loop.index0 * 0.1 }}s;"
+    >
+      <div class="card-header-custom">
+        <div class="request-status">
+          <span class="status-badge status-{{ status_class(row.status) }}">
+            <i
+              class="bi bi-{{ 'check-circle' if row.status == RequestStatus.DONE.value else 'clock' }}"
+            ></i>
+            {{ status_label(row.status) }}
+          </span>
+        </div>
+        <div class="request-date">
+          {{ row.created_at.strftime('%d.%m.%Y') }}
+        </div>
+      </div>
+
+      <div class="card-content">
+        <h3 class="request-title">
+          <i class="bi bi-building me-2"></i>
+          {{ row.object_name }}
+        </h3>
+
+        <div class="request-contractor">
+          <i class="bi bi-person-badge me-2"></i>
+          <strong>{{ row.contractor_name }}</strong>
+        </div>
+
+        <div class="request-author">
+          <i class="bi bi-person-circle me-2"></i>
+          {{ row.creator_name }}
+        </div>
+
+        <div class="manufacturers-section">
+          <label class="section-label">
+            <i class="bi bi-tags me-1"></i>
+            Производители:
+          </label>
+          <div class="manufacturers-badges">
+            {% for badge in row.manufacturer_badges %}
+            <span
+              class="manufacturer-badge {{ 'processed' if badge.is_processed else 'unprocessed' }}"
+            >
+              {{ badge.name }}
+              <i class="bi bi-{{ 'check' if badge.is_processed else 'x' }}"></i>
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <a
+          href="{{ url_for('request_crud.view_request', id=row.request.id) }}"
+          class="action-btn view-btn"
+        >
+          <i class="bi bi-eye"></i>
+          <span>Просмотр</span>
+        </a>
+        {% if row.status == RequestStatus.OPEN.value %}
+        <a
+          href="{{ url_for('request_process.process_request', id=row.request.id) }}"
+          class="action-btn process-btn"
+        >
+          <i class="bi bi-gear"></i>
+          <span>Обработать</span>
+        </a>
+        {% endif %} {% if current_user.role == 'admin' %}
+        <button
+          class="action-btn delete-btn"
+          onclick="confirmDelete({{ row.request.id }})"
+        >
+          <i class="bi bi-trash"></i>
+          <span>Удалить</span>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %} {% else %}
+    <div class="empty-state slide-up">
+      <div class="empty-icon">
+        <i class="bi bi-inbox"></i>
+      </div>
+      <h3>Заявок не найдено</h3>
+      <p>Создайте первую заявку, чтобы начать работу</p>
+      <a
+        href="{{ url_for('request_crud.create_request') }}"
+        class="btn btn-primary"
+      >
+        <i class="bi bi-plus-circle me-2"></i>
+        Создать заявку
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Таблица заявок (скрыта по умолчанию) -->
+  <div id="requests-table" class="d-none">
+    {% if table_rows %}
+    <div class="modern-table-container slide-up">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th><i class="bi bi-building me-1"></i>Объект</th>
+            <th><i class="bi bi-person me-1"></i>Подрядчик</th>
+            <th><i class="bi bi-person-circle me-1"></i>Автор</th>
+            <th><i class="bi bi-tags me-1"></i>Производители</th>
+            <th><i class="bi bi-calendar me-1"></i>Дата</th>
+            <th><i class="bi bi-flag me-1"></i>Статус</th>
+            <th><i class="bi bi-gear me-1"></i>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in table_rows %}
+          <tr class="table-row">
+            <td class="object-cell">
+              <a
+                href="{{ url_for('op.op_object', object_id=row.request.object_id) }}"
+                class="link-primary text-decoration-none"
+              >
+                <strong>{{ row.object_name }}</strong>
+              </a>
+            </td>
+            <td class="contractor-cell">{{ row.contractor_name }}</td>
+            <td class="author-cell">{{ row.creator_name }}</td>
+            <td class="manufacturers-cell">
+              <div class="manufacturers-list">
+                {% for badge in row.manufacturer_badges %}
+                <span
+                  class="mini-badge {{ 'success' if badge.is_processed else 'danger' }}"
+                >
+                  {{ badge.name }}
+                </span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="date-cell">{{ row.created_at.strftime('%d.%m.%Y') }}</td>
+            <td class="status-cell">
+              <span class="table-status {{ status_class(row.status) }}">
+                {{ status_label(row.status) }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <div class="table-actions">
+                <a
+                  href="{{ url_for('request_crud.view_request', id=row.request.id) }}"
+                  class="table-btn view"
+                >
+                  <i class="bi bi-eye"></i>
+                </a>
+                {% if row.status == RequestStatus.OPEN.value %}
+                <a
+                  href="{{ url_for('request_process.process_request', id=row.request.id) }}"
+                  class="table-btn process"
+                >
+                  <i class="bi bi-gear"></i>
+                </a>
+                {% endif %} {% if current_user.role == 'admin' %}
+                <button
+                  class="table-btn delete"
+                  onclick="confirmDelete({{ row.request.id }})"
+                >
+                  <i class="bi bi-trash"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Пагинация -->
+  {% if pagination and pagination.pages > 1 %}
+  <nav aria-label="Пагинация заявок">
+    <ul class="pagination justify-content-center">
+      {% if pagination.has_prev %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="{{ url_for('main.dashboard', page=pagination.prev_num, status=current_filter, search=request.args.get('search', ''), my_requests=request.args.get('my_requests', ''), per_page=per_page) }}"
+          aria-label="Предыдущая"
+        >
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="#" aria-label="Предыдущая">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+      {% endif %} {% for page_num in pagination.iter_pages() %} {% if page_num
+      %} {% if page_num != pagination.page %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="{{ url_for('main.dashboard', page=page_num, status=current_filter, search=request.args.get('search', ''), my_requests=request.args.get('my_requests', ''), per_page=per_page) }}"
+          >{{ page_num }}</a
+        >
+      </li>
+      {% else %}
+      <li class="page-item active">
+        <a class="page-link" href="#">{{ page_num }}</a>
+      </li>
+      {% endif %} {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="#">…</a>
+      </li>
+      {% endif %} {% endfor %} {% if pagination.has_next %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="{{ url_for('main.dashboard', page=pagination.next_num, status=current_filter, search=request.args.get('search', ''), my_requests=request.args.get('my_requests', ''), per_page=per_page) }}"
+          aria-label="Следующая"
+        >
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="#" aria-label="Следующая">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<!-- Форма удаления (скрытая) -->
+<form
+  id="deleteForm"
+  action="#"
+  method="POST"
+  style="display: none"
+  data-delete-url-template="{{ url_for('request_crud.delete_request', id=0) }}"
+>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+{% endblock %} {% block scripts %}
+<script
+  src="{{ url_for('static', filename='js/dashboard.js') }}"
+  defer
+></script>
+{% endblock %}

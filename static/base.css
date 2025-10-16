@@ -1,0 +1,37 @@
+/* ПРОРТЕТНЫЕ ПРАВЛА Z-INDEX */
+.navbar,
+nav.navbar,
+header.navbar,
+.navbar[style] {
+  z-index: 1031 !important;
+  position: relative !important;
+}
+
+.modal,
+.modal.show,
+.modal.fade,
+.modal.fade.show {
+  z-index: 1055 !important;
+}
+
+.modal-backdrop,
+.modal-backdrop.show,
+.modal-backdrop.fade,
+.modal-backdrop.fade.show {
+  z-index: 1050 !important;
+}
+
+.modal-dialog,
+.modal.show .modal-dialog {
+  z-index: 1056 !important;
+}
+
+.modal-content,
+.modal.show .modal-content {
+  z-index: 1057 !important;
+}
+
+/* Отступ сверху при отображении баннера ожидания перезагрузки */
+body.restart-notice-shown {
+  padding-top: 56px;
+}

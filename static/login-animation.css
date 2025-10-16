@@ -1,0 +1,406 @@
+/* ===== АНМАЦЯ АВТОРЗАЦ ===== */
+
+/* Полноэкранный синий фон */
+.login-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(
+    45deg,
+    var(--color-primary),
+    var(--color-primary-dark),
+    var(--color-secondary),
+    var(--color-primary)
+  );
+  background-size: 400% 400%;
+  animation: loginGradient 20s ease infinite;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+@keyframes loginGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Анимированный фон с частицами */
+.login-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+      circle at 20% 80%,
+      rgb(120 119 198 / 30%) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgb(255 255 255 / 10%) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgb(120 119 198 / 20%) 0%,
+      transparent 50%
+    );
+  animation: particleMove 20s ease-in-out infinite;
+}
+
+@keyframes particleMove {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  33% {
+    transform: translate(30px, -30px) rotate(120deg);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) rotate(240deg);
+  }
+}
+
+/* Контейнер формы */
+.login-form-container {
+  background: rgb(255 255 255 / 10%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 1rem;
+  box-shadow:
+    0 32px 64px rgb(0 0 0 / 20%),
+    inset 0 1px 0 rgb(255 255 255 / 30%);
+  transform: translateY(-100vh);
+  opacity: 0;
+  animation: slideDownForm 0.8s ease-out 0.5s forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Анимация появления формы сверху */
+@keyframes slideDownForm {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Анимация исчезновения формы вниз */
+.login-form-container.slide-out {
+  animation: slideUpForm 0.6s ease-in forwards;
+}
+
+@keyframes slideUpForm {
+  to {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+/* Заголовок формы */
+.login-title {
+  color: var(--white);
+  font-size: 2.5rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(45deg, var(--white), var(--color-accent-light));
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  from {
+    filter: drop-shadow(0 0 10px rgb(255 255 255 / 30%));
+  }
+
+  to {
+    filter: drop-shadow(0 0 20px rgb(255 255 255 / 60%));
+  }
+}
+
+.login-subtitle {
+  color: rgb(255 255 255 / 80%);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+/* Поля ввода в форме авторизации */
+.login-form .form-control {
+  background: rgb(255 255 255 / 10%);
+  border: 2px solid rgb(255 255 255 / 20%);
+  color: var(--white);
+  font-size: 1.1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.login-form .form-control::placeholder {
+  color: rgb(255 255 255 / 60%);
+}
+
+.login-form .form-control:focus {
+  background: rgb(255 255 255 / 15%);
+  border-color: rgb(255 255 255 / 40%);
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 10%);
+  outline: none;
+  transform: scale(1.02);
+}
+
+/* Кнопка входа */
+.login-btn {
+  background: linear-gradient(45deg, var(--white), var(--gray-100));
+  color: var(--color-secondary);
+  border: none;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 1rem 2rem;
+  border-radius: 16px;
+  width: 100%;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+.login-btn--ghost {
+  background: transparent;
+  color: var(--white);
+  border: 2px solid rgb(255 255 255 / 50%);
+  box-shadow: none;
+}
+
+.login-btn.loading,
+.login-btn--ghost.loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.demo-hint {
+  color: rgb(255 255 255 / 70%);
+  font-size: 0.9rem;
+}
+
+.login-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--color-primary-rgb), 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.login-btn:hover::before {
+  left: 100%;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 30%);
+  background: linear-gradient(45deg, var(--gray-50), var(--white));
+}
+
+.login-btn--ghost:hover {
+  background: rgb(255 255 255 / 15%);
+  color: var(--white);
+  border-color: rgb(255 255 255 / 70%);
+  box-shadow: none;
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+/* Лоадер на кнопке */
+.login-btn.loading {
+  pointer-events: none;
+}
+
+.login-btn .spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgb(30 64 175 / 30%);
+  border-radius: 50%;
+  border-top-color: var(--color-secondary);
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 0.5rem;
+}
+
+/* Анимация исчезновения экрана авторизации */
+.login-screen.fade-out {
+  animation: fadeOutLogin 0.8s ease-in forwards;
+}
+
+@keyframes fadeOutLogin {
+  to {
+    opacity: 0;
+    transform: scale(1.1);
+    pointer-events: none;
+  }
+}
+
+/* Декоративные элементы */
+.login-form-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent,
+    rgb(255 255 255 / 10%),
+    transparent 30%
+  );
+  animation: rotate 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.login-form-container::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-radius: 23px;
+  pointer-events: none;
+}
+
+.login-form {
+  position: relative;
+  z-index: 10;
+}
+
+/* Адаптивность для мобильных */
+@media (width <= 480px) {
+  .login-form-container {
+    padding: 2rem 1.5rem;
+    margin: 0 0.5rem;
+  }
+
+  .login-title {
+    font-size: 2rem;
+  }
+
+  .login-form .form-control {
+    font-size: 1rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .login-btn {
+    font-size: 1rem;
+    padding: 0.875rem 1.5rem;
+  }
+}
+
+/* Анимация для ошибок */
+.login-error {
+  background: rgb(239 68 68 / 10%);
+  border: 1px solid rgb(239 68 68 / 30%);
+  color: var(--danger-medium);
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Floating элементы на фоне */
+.floating-element {
+  position: absolute;
+  background: rgb(255 255 255 / 10%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float 6s ease-in-out infinite;
+}
+
+.floating-element:nth-child(1) {
+  width: 80px;
+  height: 80px;
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.floating-element:nth-child(2) {
+  width: 120px;
+  height: 120px;
+  top: 70%;
+  right: 10%;
+  animation-delay: 2s;
+}
+
+.floating-element:nth-child(3) {
+  width: 60px;
+  height: 60px;
+  bottom: 20%;
+  left: 70%;
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+}

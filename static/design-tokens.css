@@ -1,0 +1,126 @@
+/* ===== ДЗАЙН-ТОКЕНЫ: светлая тема ===== */
+:root {
+  /* === Цветовая палитра === */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-light: #3b82f6;
+  --color-secondary: #1e40af;
+  --color-accent: #7c3aed;
+  --color-accent-dark: #6d28d9;
+  --color-accent-light: #e0e7ff;
+
+  /* === Градиенты === */
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-accent) 100%
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    var(--color-accent) 0%,
+    var(--color-accent-dark) 100%
+  );
+  --gradient-success: linear-gradient(
+    135deg,
+    var(--success) 0%,
+    var(--success-dark) 100%
+  );
+  --gradient-warning: linear-gradient(
+    135deg,
+    var(--warning) 0%,
+    var(--warning-dark) 100%
+  );
+  --gradient-danger: linear-gradient(
+    135deg,
+    var(--danger) 0%,
+    var(--danger-dark) 100%
+  );
+
+  /* === Нейтральные цвета === */
+  --white: #fff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+
+  /* === Функциональные цвета === */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --success-dark: #047857;
+  --warning: #b45309;
+  --warning-light: #fef3c7;
+  --warning-dark: #92400e;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --danger-dark: #b91c1c;
+  --danger-medium: #fca5a5;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+
+  /* === Дополнительные значения === */
+  --color-primary-rgb: 37, 99, 235;
+  --color-primary-light-rgb: 59, 130, 246;
+
+  /* === Размеры и отступы === */
+  --border-radius: 12px;
+  --border-radius-lg: 16px;
+  --border-radius-xl: 20px;
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* === Тени === */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 5%);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -2px rgb(0 0 0 / 5%);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 10%),
+    0 10px 10px -5px rgb(0 0 0 / 4%);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 25%);
+
+  /* === Анимации === */
+  --transition-fast: 0.15s ease-in-out;
+  --transition-normal: 0.3s ease-in-out;
+  --transition-slow: 0.5s ease-in-out;
+
+  /* === Типографика === */
+  --font-sans: 'Inter', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto,
+    sans-serif;
+  --font-mono: 'Fira Code', 'SF Mono', monaco, 'Cascadia Code', monospace;
+
+  /* === Bootstrap совместимость === */
+  --bs-body-bg: var(--gray-50);
+  --bs-card-bg: var(--white);
+  --bs-table-bg: var(--white);
+  --bs-form-control-bg: var(--white);
+  --bs-form-control-color: var(--gray-800);
+}
+
+/* Альтернативная палитра */
+[data-theme='alt'] {
+  --color-primary: #10b981;
+  --color-primary-dark: #059669;
+  --color-primary-light: #34d399;
+  --color-secondary: #047857;
+  --color-accent: #0369a1;
+  --color-accent-dark: #075985;
+  --color-accent-light: #bae6fd;
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-accent) 100%
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    var(--color-accent) 0%,
+    var(--color-accent-dark) 100%
+  );
+}

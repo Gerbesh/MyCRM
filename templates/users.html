@@ -1,0 +1,172 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Пользователи</h1>
+
+  <!-- Кнопка добавления (только для админа) -->
+  {% if current_user.role == 'admin' %}
+  <a href="#addUserModal" class="btn btn-primary mb-3" data-bs-toggle="modal"
+    >Добавить пользователя</a
+  >
+  {% endif %} {% if users %}
+  <div class="row">
+    {% for user in users %}
+    <div class="col-md-4 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">{{ user.username }}</h5>
+          <p class="card-text">Роль: <strong>{{ user.role }}</strong></p>
+
+          <!-- Действия с пользователем -->
+          <div class="d-flex gap-2">
+            {% if current_user.role == 'admin' %}
+            <a
+              href="{{ url_for('user.edit_user', id=user.id) }}"
+              class="btn btn-sm btn-primary"
+              >Редактировать</a
+            >
+            <button
+              type="button"
+              class="btn btn-sm btn-danger reset-password"
+              data-user-id="{{ user.id }}"
+            >
+              Сбросить пароль
+            </button>
+            {% if user.id != current_user.id %}
+            <form
+              method="POST"
+              action="{{ url_for('user.delete_user', id=user.id) }}"
+              style="display: inline"
+              data-confirm="Вы уверены, что хотите удалить пользователя? Это действие нельзя отменить."
+            >
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                Удалить
+              </button>
+            </form>
+            {% endif %} {% else %} {% if user.id == current_user.id %}
+            <a
+              href="{{ url_for('user.edit_user', id=user.id) }}"
+              class="btn btn-sm btn-primary"
+              >Редактировать</a
+            >
+            {% endif %} {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">Пользователи не найдены</div>
+  {% endif %}
+</div>
+
+<!-- Модальное окно для добавления пользователя -->
+<div
+  class="modal fade"
+  id="addUserModal"
+  tabindex="-1"
+  aria-hidden="true"
+  aria-labelledby="addUserModalLabel"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addUserModalLabel">
+          Добавить пользователя
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form
+          id="addUserForm"
+          data-add-user-url="{{ url_for('user.add_user') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="mb-3">
+            <label for="newUsername" class="form-label">мя пользователя</label>
+            <input type="text" class="form-control" id="newUsername" required />
+          </div>
+          <div class="mb-3">
+            <label for="newPassword" class="form-label">Пароль</label>
+            <input
+              type="password"
+              class="form-control"
+              id="newPassword"
+              required
+              minlength="6"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="newRole" class="form-label">Роль</label>
+            <select class="form-control" id="newRole" required>
+              <option value="">Выберите роль</option>
+              <option value="user">Пользователь</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Отмена
+        </button>
+        <button type="submit" class="btn btn-primary" form="addUserForm">
+          Создать
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для сброса пароля -->
+<div
+  class="modal fade"
+  id="resetPasswordModal"
+  tabindex="-1"
+  aria-hidden="true"
+  aria-labelledby="resetPasswordModalLabel"
+  data-reset-user-password-base="{{ RESET_USER_PASSWORD_BASE }}"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="resetPasswordModalLabel">Сброс пароля</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Вы уверены, что хотите сбросить пароль для пользователя
+          <span id="resetUsername"></span>?
+        </p>
+        <p>Новый пароль будет показан один раз после подтверждения.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Отмена
+        </button>
+        <button type="button" class="btn btn-danger" id="confirmResetPassword">
+          Сбросить пароль
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/users.js') }}" defer></script>
+{% endblock %}

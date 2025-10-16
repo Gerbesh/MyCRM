@@ -1,0 +1,514 @@
+{% extends "base.html" %} {% block title %}Заявка #{{ req.id }} | Крепления{%
+endblock %} {% block content %}
+<div
+  class="request-detail-container"
+  data-delete-comment-url-template="{{ url_for('request_comment.delete_comment', comment_id=0) }}"
+  data-add-comment-url="{{ url_for('request_comment.add_comment', request_id=req.id) }}"
+  data-request-id="{{ req.id }}"
+  data-update-date-url="{{ url_for('request_crud.view_request', id=req.id) }}"
+  data-created-at-form-value="{{ created_at_form_value }}"
+  data-timezone-title="{{ timezone_info.title }}"
+  data-timezone-hint="{{ timezone_info.hint }}"
+  data-timezone-abbr="{{ timezone_info.abbr }}"
+>
+  <!-- Header Section -->
+  <div class="request-header slide-down">
+    <div class="row align-items-center mb-4">
+      <div class="col-md-8">
+        <div class="header-info">
+          <div class="breadcrumb-nav">
+            <a href="{{ url_for('main.dashboard') }}" class="breadcrumb-link">
+              <i class="bi bi-house"></i>
+              Заявки
+            </a>
+            <i class="bi bi-chevron-right breadcrumb-divider"></i>
+            <span class="breadcrumb-current">Заявка #{{ req.id }}</span>
+          </div>
+          <h1
+            class="request-title gradient-text d-flex align-items-center flex-wrap gap-2"
+          >
+            <span class="d-flex align-items-center gap-2">
+              <i class="bi bi-file-earmark-text"></i>
+              <span>Заявка #<span data-request-id-display>{{ req.id }}</span></span>
+            </span>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm copy-request-id-btn"
+              data-copy-request-id
+              aria-label="Скопировать номер заявки"
+            >
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </h1>
+          <div class="request-meta">
+            <span class="meta-item request-meta-created-at">
+              <i class="bi bi-calendar-event"></i>
+              <span class="text-muted">Размещена</span>
+              <span
+                class="request-created-at-value"
+                data-created-at-display
+                >{{ created_at_display }}</span
+              >
+              <abbr
+                class="ms-2 text-muted"
+                title="{{ timezone_info.title }}"
+                data-timezone-abbr
+                >{{ timezone_info.abbr }}</abbr
+              >
+              {% if current_user.role == 'admin' %}
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 ms-2 edit-created-at-btn"
+                data-action="edit-date"
+                aria-label="Редактировать дату размещения"
+              >
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              {% endif %}
+            </span>
+            <span
+              class="status-badge-large status-{{ status_class(req.status) }}"
+              data-status-badge
+            >
+              <i
+                class="bi bi-{{ 'check-circle' if req.status == RequestStatus.DONE.value else 'clock' }}"
+              ></i>
+              {{ status_label(req.status) }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <div class="action-buttons">
+          {% if current_user.role != 'demo' %}
+          {% if current_user.role == 'admin' or current_user.id ==
+          req.created_by %}
+          <a
+            href="{{ url_for('request_process.process_request', id=req.id) }}"
+            class="btn btn-primary btn-lg shadow-hover"
+          >
+            <i class="bi bi-pencil-square me-2"></i>
+            Редактировать
+          </a>
+          {% endif %} {% if req.status != RequestStatus.DONE.value %}
+          <a
+            href="{{ url_for('request_process.process_request', id=req.id) }}"
+            class="btn btn-warning btn-lg shadow-hover"
+          >
+            <i class="bi bi-gear me-2"></i>
+            Обработать
+          </a>
+          <a
+            href="{{ url_for('request_crud.create_request', copy_from=req.id) }}"
+            class="btn btn-secondary btn-lg shadow-hover"
+          >
+            <i class="bi bi-files me-2"></i>
+            Копировать
+          </a>
+          {% endif %}
+          {% else %}
+          <span class="badge bg-warning text-dark" data-demo-locked>
+            Демо-режим: действия недоступны
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Content Column -->
+    <div class="col-lg-8">
+      <!-- Основная информация -->
+      <div class="detail-card slide-up" style="animation-delay: 0.1s">
+        <div class="card-header-modern">
+          <div class="header-icon">
+            <i class="bi bi-info-circle"></i>
+          </div>
+          <h3 class="header-title">Основная информация</h3>
+        </div>
+        <div class="card-content-modern">
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">
+                <i class="bi bi-building"></i>
+                Объект
+              </div>
+              <div class="info-value">
+                {{ object_info.name if object_info else 'Неизвестный' }}
+              </div>
+            </div>
+
+            <div class="info-item full-width">
+              <div class="info-label">
+                <i class="bi bi-person"></i>
+                Подрядчик
+              </div>
+              <div class="info-value">
+                {% if contractors %}
+                <div class="contractors-list">
+                  {% for contractor in contractors %}
+                  <div class="contractor-badge">
+                    <span class="contractor-name">{{ contractor.name }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% else %}
+                <span class="text-muted">Нет подрядчика</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="info-item full-width">
+              <div class="info-label">
+                <i class="bi bi-tags"></i>
+                Производители
+              </div>
+              <div class="info-value">
+                <div class="manufacturers-list">
+                  {% for manufacturer in req.manufacturers_list %}
+                  <span class="manufacturer-tag">{{ manufacturer }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            {% if processed_by_user %}
+            <div class="info-item">
+              <div class="info-label">
+                <i class="bi bi-person-check"></i>
+                Обработана
+              </div>
+              <div class="info-value">
+                <div class="processed-info">
+                  <strong>{{ processed_by_user.username }}</strong><br />
+                  <small class="text-muted"
+                    >{{ req.processed_at.strftime('%d.%m.%Y %H:%M') }}</small
+                  >
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Прикрепленные файлы -->
+      {% if files %}
+      <div class="detail-card slide-up" style="animation-delay: 0.2s">
+        <div class="card-header-modern">
+          <div class="header-icon">
+            <i class="bi bi-paperclip"></i>
+          </div>
+          <h3 class="header-title">Прикрепленные файлы</h3>
+          <div class="header-badge">{{ files|length }}</div>
+        </div>
+        <div class="card-content-modern">
+          <div class="files-grid">
+            {% for file in files %}
+            <div class="file-card">
+              <div class="file-icon">
+                <i class="bi bi-file-earmark"></i>
+              </div>
+              <div class="file-info">
+                <div class="file-name">{{ file.filename }}</div>
+                <div class="file-size">{{ file.size }}</div>
+              </div>
+              <div class="file-actions">
+                <a
+                  href="{{ url_for('files.download_file', filename=file.rel_path|replace('\\\\', '/')) }}"
+                  class="file-download-btn"
+                  download="{{ file.filename }}"
+                >
+                  <i class="bi bi-download"></i>
+                </a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Скриншоты производителей -->
+      {% if attachments %}
+      <div class="detail-card slide-up" style="animation-delay: 0.3s">
+        <div class="card-header-modern">
+          <div class="header-icon">
+            <i class="bi bi-images"></i>
+          </div>
+          <h3 class="header-title">Скриншоты производителей</h3>
+          <div class="header-badge">{{ attachments|length }}</div>
+        </div>
+        <div class="card-content-modern">
+          <div class="screenshots-grid">
+            {% for attachment in attachments %}
+            <div class="screenshot-card">
+              <div class="screenshot-header">
+                <div class="manufacturer-info">
+                  <strong>{{ attachment.manufacturer }}</strong>
+                  <small>{{ attachment_contractors[attachment.id] }}</small>
+                </div>
+                {% if current_user.role == 'admin' %}
+                <button
+                  type="button"
+                  class="delete-screenshot-btn"
+                  data-attachment-id="{{ attachment.id }}"
+                  data-request-id="{{ req.id }}"
+                  data-manufacturer="{{ attachment.manufacturer }}"
+                >
+                  <i class="bi bi-trash"></i>
+                </button>
+                {% endif %}
+              </div>
+              <div class="screenshot-image">
+                <img
+                  src="{{ url_for('static', filename=attachment.screenshot) }}"
+                  class="screenshot-img clickable-image"
+                  alt="Скриншот {{ attachment.manufacturer|e }}"
+                  data-fullsize="{{ url_for('static', filename=attachment.screenshot) }}"
+                />
+                <div class="image-overlay">
+                  <i class="bi bi-zoom-in"></i>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar Column -->
+    <div class="col-lg-4">
+      <!-- Комментарии -->
+      <div class="detail-card slide-left" style="animation-delay: 0.4s">
+        <div class="card-header-modern">
+          <div class="header-icon">
+            <i class="bi bi-chat-dots"></i>
+          </div>
+          <h3 class="header-title">Комментарии</h3>
+          {% if comments %}
+          <div class="header-badge">{{ comments|length }}</div>
+          {% endif %}
+        </div>
+        <div class="card-content-modern">
+          <div class="comments-section">
+            {% if comments %} {% for comment in comments %}
+            <div class="comment-card" data-comment-id="{{ comment.id }}">
+              <div class="comment-header">
+                <div class="comment-author">
+                  <div class="author-avatar">
+                    <i class="bi bi-person"></i>
+                  </div>
+                  <div class="author-info">
+                    <strong>{{ comment.username }}</strong>
+                    <small
+                      >{{ comment.created_at.strftime('%d.%m.%Y %H:%M')
+                      }}</small
+                    >
+                  </div>
+                </div>
+                {% if comment.can_delete %}
+                <div class="comment-actions">
+                  {% if current_user.role == 'admin' %}
+                  <button
+                    type="button"
+                    class="comment-delete-btn delete-comment-btn"
+                    data-comment-id="{{ comment.id }}"
+                    title="Удалить комментарий"
+                  >
+                    <i class="bi bi-trash"></i>
+                  </button>
+                  {% elif comment.user_id == current_user.id and
+                  comment.remaining_time > 0 %}
+                  <button
+                    type="button"
+                    class="comment-delete-btn delete-comment-btn"
+                    data-comment-id="{{ comment.id }}"
+                    data-remaining-time="{{ comment.remaining_time }}"
+                    title="Удалить комментарий"
+                  >
+                    <i class="bi bi-trash"></i>
+                    <span class="timer-text"
+                      >(<span class="timer">{{ comment.remaining_time }}</span
+                      >s)</span
+                    >
+                  </button>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+              <div class="comment-content">{{ comment.content }}</div>
+            </div>
+            {% endfor %} {% else %}
+            <div class="empty-comments">
+              <div class="empty-icon">
+                <i class="bi bi-chat"></i>
+              </div>
+              <p>Комментариев пока нет</p>
+            </div>
+            {% endif %}
+
+            <!-- Форма добавления комментария -->
+            <div class="add-comment-section">
+              {% if current_user.role != 'demo' %}
+              <form
+                id="add-comment-form"
+                class="comment-form"
+                action="{{ url_for('request_comment.add_comment', request_id=req.id) }}"
+                method="post"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                <div class="form-group">
+                  <label for="content" class="form-label">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Добавить комментарий
+                  </label>
+                  <textarea
+                    name="content"
+                    id="content"
+                    class="form-control comment-textarea"
+                    rows="3"
+                    placeholder="Введите ваш комментарий..."
+                    required
+                  ></textarea>
+                </div>
+                <button
+                  type="submit"
+                  class="btn btn-primary comment-submit-btn"
+                >
+                  <i class="bi bi-send me-2"></i>
+                  Отправить
+                </button>
+              </form>
+              {% else %}
+              <div class="alert alert-info" role="status">
+                <i class="bi bi-eye me-2"></i>
+                В демо-режиме комментарии недоступны для редактирования.
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if current_user.role == 'admin' %}
+<div
+  class="modal fade"
+  id="editDateModal"
+  tabindex="-1"
+  aria-hidden="true"
+  aria-labelledby="editDateModalLabel"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editDateModalLabel">Редактирование даты</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <form
+        id="editDateForm"
+        method="post"
+        action="{{ url_for('request_crud.view_request', id=req.id) }}"
+        novalidate
+      >
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="requestCreatedAtInput" class="form-label"
+              >Дата и время размещения</label
+            >
+            <input
+              type="datetime-local"
+              class="form-control"
+              id="requestCreatedAtInput"
+              name="created_at"
+              value="{{ created_at_form_value }}"
+              required
+            />
+            <div class="invalid-feedback">
+              Укажите корректные дату и время.
+            </div>
+            <div
+              class="text-danger small mt-2 d-none"
+              data-edit-date-error
+            ></div>
+            <small class="form-text text-muted" data-edit-date-hint>
+              {{ timezone_info.hint }}
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Отмена
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Сохранить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Модальное окно подтверждения удаления -->
+<div
+  class="modal fade"
+  id="deleteModal"
+  tabindex="-1"
+  aria-hidden="true"
+  aria-labelledby="deleteModalLabel"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">
+          Подтверждение удаления
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Вы действительно хотите удалить скриншот производителя
+        <strong id="deleteManufacturerName"></strong>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Отмена
+        </button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+          Удалить
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script
+  src="{{ url_for('static', filename='js/view_request.js') }}"
+  defer
+></script>
+{% endblock %}

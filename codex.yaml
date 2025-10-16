@@ -1,0 +1,2 @@
+shell_environment_policy:
+  experimental_use_profile: true

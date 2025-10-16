@@ -1,0 +1,42 @@
+<div class="comment-card" data-comment-id="{{ comment.id }}">
+  <div class="comment-header">
+    <div class="comment-author">
+      <div class="author-avatar">
+        <i class="bi bi-person"></i>
+      </div>
+      <div class="author-info">
+        <strong>{{ comment.username }}</strong>
+        <small>{{ comment.created_at }}</small>
+      </div>
+    </div>
+    {% if comment.can_delete %}
+    <div class="comment-actions">
+      {% if current_user.role == 'admin' %}
+      <button
+        type="button"
+        class="comment-delete-btn delete-comment-btn"
+        data-comment-id="{{ comment.id }}"
+        title="Удалить комментарий"
+      >
+        <i class="bi bi-trash"></i>
+      </button>
+      {% elif comment.user_id == current_user.id and comment.remaining_time > 0
+      %}
+      <button
+        type="button"
+        class="comment-delete-btn delete-comment-btn"
+        data-comment-id="{{ comment.id }}"
+        data-remaining-time="{{ comment.remaining_time }}"
+        title="Удалить комментарий"
+      >
+        <i class="bi bi-trash"></i>
+        <span class="timer-text"
+          >(<span class="timer">{{ comment.remaining_time }}</span>s)</span
+        >
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  <div class="comment-content">{{ comment.content }}</div>
+</div>

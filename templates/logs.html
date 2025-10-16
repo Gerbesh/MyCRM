@@ -1,0 +1,17 @@
+﻿{% extends 'base.html' %} {% block title %}Р›РѕРіРё{% endblock %} {% block
+content %}
+<h2 class="mb-3">Р›РѕРіРё РїСЂРёР»РѕР¶РµРЅРёСЏ</h2>
+<pre
+  id="log-content"
+  data-url="{{ url_for('main.get_log_data') }}"
+  class="p-3 rounded"
+  style="
+    max-height: 70vh;
+    overflow: auto;
+    background: var(--gray-900);
+    color: var(--gray-100);
+  "
+></pre>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='logs.js') }}" defer></script>
+{% endblock %}

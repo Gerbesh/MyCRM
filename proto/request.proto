@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package crm;
+
+message GetRequestRequest {
+  int32 id = 1;
+}
+
+message Request {
+  int32 id = 1;
+  int32 object_id = 2;
+  string status = 3;
+}
+
+service RequestService {
+  rpc GetRequest(GetRequestRequest) returns (Request);
+}
